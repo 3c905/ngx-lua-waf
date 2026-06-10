@@ -176,6 +176,21 @@ headerrules = read_rule('header')
 responserules = read_rule('response')
 
 -- ============================================================
+-- 动作模式判断：是否拦截
+-- action_key: 对应 config.lua 中的 xxxAction 变量名
+-- 返回 true 表示需要拦截，false 表示仅记录日志
+-- ============================================================
+function should_block(action_key)
+    if action_key and _G[action_key] then
+        return _G[action_key] == "block"
+    end
+    if ActionMode then
+        return ActionMode == "block"
+    end
+    return true
+end
+
+-- ============================================================
 -- 响应处理
 -- ============================================================
 
@@ -216,7 +231,10 @@ function fileExtCheck(ext)
         for rule in pairs(items) do
             if cache.match_cached(ext, rule, "isjo") then
                 log('POST', ngx.var.request_uri, "-", "[FILEEXT][403] hit=[" .. ext .. "] rule=" .. rule)
-                say_html()
+                if should_block("FileExtAction") then
+                    say_html()
+                end
+                return true
             end
         end
     end
@@ -259,7 +277,9 @@ function args()
                 end
                 if m then
                     log('GET', ngx.var.request_uri, "-", "[ARGS][403] hit=[" .. string.sub(m[0] or "-", 1, 200) .. "] rule=" .. rule)
-                    say_html()
+                    if should_block("ArgsAction") then
+                        say_html()
+                    end
                     return true
                 end
             end
@@ -279,7 +299,9 @@ function url()
                 local m = cache.match_cached(ngx.var.request_uri, rule, "isjo")
                 if m then
                     log('GET', ngx.var.request_uri, "-", "[URL][403] hit=[" .. string.sub(m[0] or "-", 1, 200) .. "] rule=" .. rule)
-                    say_html()
+                    if should_block("URLAction") then
+                        say_html()
+                    end
                     return true
                 end
             end
@@ -300,7 +322,9 @@ function ua()
                 local m = cache.match_cached(ua, rule, "isjo")
                 if m then
                     log('UA', ngx.var.request_uri, "-", "[UA][403] hit=[" .. string.sub(m[0] or "-", 1, 200) .. "] rule=" .. rule)
-                    say_html()
+                    if should_block("UAAction") then
+                        say_html()
+                    end
                     return true
                 end
             end
@@ -323,7 +347,9 @@ function body(data)
             end
             if m then
                 log('POST', ngx.var.request_uri, data, "[POST][403] hit=[" .. string.sub(m[0] or "-", 1, 200) .. "] rule=" .. rule)
-                say_html()
+                if should_block("PostAction") then
+                    say_html()
+                end
                 return true
             end
         end
@@ -343,7 +369,9 @@ function cookie()
                 local m = cache.match_cached(ck, rule, "isjo")
                 if m then
                     log('Cookie', ngx.var.request_uri, "-", "[COOKIE][403] hit=[" .. string.sub(m[0] or "-", 1, 200) .. "] rule=" .. rule)
-                    say_html()
+                    if should_block("CookieAction") then
+                        say_html()
+                    end
                     return true
                 end
             end
@@ -372,7 +400,9 @@ function denycc()
         local req, _ = limit:get(token)
         if req then
             if req > CCcount then
-                ngx.exit(503)
+                if should_block("CCAction") then
+                    ngx.exit(503)
+                end
                 return true
             else
                 limit:incr(token, 1)
@@ -425,7 +455,10 @@ function blockip()
     if next(ipBlocklist) ~= nil then
         local client_ip = getClientIp()
         if utils.ip_in_list(client_ip, ipBlocklist) then
-            ngx.exit(403)
+            log('GET', ngx.var.request_uri, "-", "[IPBLOCK][403] hit=[" .. client_ip .. "]")
+            if should_block("IPBlockAction") then
+                ngx.exit(403)
+            end
             return true
         end
     end
@@ -449,7 +482,9 @@ function dangerous()
                     if m then
                         local hit = string.sub(m[0] or "-", 1, 200)
                         log('GET', ngx.var.request_uri, "-", "[DANGEROUS][" .. tag .. "][404] hit=[" .. hit .. "] rule=" .. rule)
-                        say_html(ngx.HTTP_NOT_FOUND)
+                        if should_block("DangerousAction") then
+                            say_html(ngx.HTTP_NOT_FOUND)
+                        end
                         return true
                     end
                 end
@@ -473,7 +508,9 @@ function referer()
                     if m then
                         local hit = string.sub(m[0] or "-", 1, 200)
                         log('GET', ngx.var.request_uri, "-", "[REFERER][403] hit=[" .. hit .. "] rule=" .. rule)
-                        say_html()
+                        if should_block("RefererAction") then
+                            say_html()
+                        end
                         return true
                     end
                 end
@@ -497,7 +534,9 @@ function methodcheck()
                     if m then
                         local hit = string.sub(m[0] or "-", 1, 200)
                         log('GET', ngx.var.request_uri, "-", "[METHOD][403] hit=[" .. hit .. "] rule=" .. rule)
-                        ngx.exit(403)
+                        if should_block("MethodAction") then
+                            ngx.exit(403)
+                        end
                         return true
                     end
                 end
@@ -518,7 +557,9 @@ function traversal()
         if m then
             local hit = string.sub(m[0] or "-", 1, 200)
             log('GET', request_uri, "-", "[TRAVERSAL][400] hit=[" .. hit .. "] path_traversal")
-            ngx.exit(400)
+            if should_block("TraversalAction") then
+                ngx.exit(400)
+            end
             return true
         end
     end
@@ -543,7 +584,9 @@ function headers()
                     if m then
                         local hit = string.sub(m[0] or "-", 1, 200)
                         log('GET', ngx.var.request_uri, "-", "[HEADER][403] hit=[" .. hit .. "] header=" .. hname .. " rule=" .. rule)
-                        say_html()
+                        if should_block("HeaderAction") then
+                            say_html()
+                        end
                         return true
                     end
                 end
@@ -567,8 +610,10 @@ function response_filter()
                     if m then
                         local hit = string.sub(m[0] or "-", 1, 200)
                         log('GET', ngx.var.request_uri, "-", "[RESPONSE][500] hit=[" .. hit .. "] rule=" .. rule)
-                        ngx.arg[1] = "<html><body><h1>Internal Server Error</h1></body></html>"
-                        ngx.arg[2] = true
+                        if should_block("ResponseAction") then
+                            ngx.arg[1] = "<html><body><h1>Internal Server Error</h1></body></html>"
+                            ngx.arg[2] = true
+                        end
                         return
                     end
                 end

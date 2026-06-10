@@ -9,9 +9,11 @@ local MAX_BODY_SIZE = 10 * 1024 * 1024  -- 10MB，可调整
 if content_length and content_length > MAX_BODY_SIZE then
     if method == "POST" or method == "PUT" or method == "PATCH" then
         ngx.log(ngx.WARN, "WAF: request body too large: ", content_length)
-        ngx.status = 413
-        ngx.say("Request Entity Too Large")
-        ngx.exit(413)
+        if should_block and should_block("BodyLimitAction") then
+            ngx.status = 413
+            ngx.say("Request Entity Too Large")
+            ngx.exit(413)
+        end
     end
 end
 
@@ -39,9 +41,15 @@ elseif headers() then
 elseif denycc() then
     -- CC 防护（在白名单之后，避免误杀正常白名单流量）
 elseif ngx.var.http_Acunetix_Aspect then
-    ngx.exit(444)
+    ngx.log(ngx.WARN, "WAF: Scanner detected: Acunetix_Aspect")
+    if should_block and should_block("ScannerAction") then
+        ngx.exit(444)
+    end
 elseif ngx.var.http_X_Scan_Memo then
-    ngx.exit(444)
+    ngx.log(ngx.WARN, "WAF: Scanner detected: X-Scan-Memo")
+    if should_block and should_block("ScannerAction") then
+        ngx.exit(444)
+    end
 elseif referer() then
     -- 恶意 Referer
 elseif ua() then

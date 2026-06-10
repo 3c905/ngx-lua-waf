@@ -121,6 +121,31 @@ CCChallengeTTL = 300
 LogRateLimit = 0
 
 -- ============================================================
+-- 【新增】各模块动作模式配置
+-- ============================================================
+-- 全局默认模式: "block" = 拦截并记录日志, "log" = 仅记录日志不拦截
+ActionMode = "block"
+
+-- 各模块可独立覆盖（未配置则继承全局 ActionMode）
+-- 值: "block" 或 "log"
+IPBlockAction = "block"      -- IP 黑名单
+CCAction = "block"           -- CC 防御（含增强版）
+MethodAction = "block"       -- HTTP 方法限制（TRACE/TRACK）
+TraversalAction = "block"    -- 路径穿越/空字节
+HeaderAction = "block"       -- Header 攻击检测
+RefererAction = "block"      -- 恶意 Referer
+UAAction = "block"           -- User-Agent 黑名单
+DangerousAction = "block"    -- 敏感路径/文件
+URLAction = "block"          -- URL 黑名单
+ArgsAction = "block"         -- GET 参数攻击
+CookieAction = "block"       -- Cookie 攻击
+PostAction = "block"         -- POST 参数攻击
+FileExtAction = "block"      -- 上传文件扩展名
+ResponseAction = "block"     -- 响应敏感信息泄露
+BodyLimitAction = "block"    -- 请求体大小限制（防 DoS）
+ScannerAction = "block"      -- 扫描器特征头（Acunetix/X-Scan）
+
+-- ============================================================
 -- 拦截页面 HTML
 -- ============================================================
 

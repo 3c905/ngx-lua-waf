@@ -50,6 +50,25 @@ _M.config = {
 }
 
 -- ============================================================
+-- CC 动作模式辅助函数
+-- ============================================================
+local function cc_should_block()
+    local sb = _G.should_block
+    if sb then
+        return sb("CCAction")
+    end
+    return true
+end
+
+local function cc_block_or_exit(status)
+    if not cc_should_block() then
+        return true
+    end
+    ngx.exit(status)
+    return true
+end
+
+-- ============================================================
 -- 辅助函数：解析 rate 字符串 "count/seconds"
 -- ============================================================
 
@@ -158,8 +177,7 @@ end
 
 local function apply_progressive_penalty(ip, uri, req_type)
     if not _M.config.progressive then
-        ngx.exit(503)
-        return true
+        return cc_block_or_exit(503)
     end
     
     local ban_dict = get_dict(DICT_BAN)
@@ -182,8 +200,7 @@ local function apply_progressive_penalty(ip, uri, req_type)
     -- 根据历史次数选择惩罚
     if history == 1 then
         -- 第1次：503 服务不可用
-        ngx.exit(503)
-        return true
+        return cc_block_or_exit(503)
         
     elseif history == 2 and _M.config.challenge_enabled then
         -- 第2次：尝试 Cookie 挑战
@@ -191,29 +208,27 @@ local function apply_progressive_penalty(ip, uri, req_type)
         if challenge_passed and challenge_passed == "1" then
             -- 已通过挑战，但频率仍过高，封禁短时间
             _M.ban_ip(ip, 2, _M.config.ban_duration_1)
-            ngx.exit(503)
-            return true
+            return cc_block_or_exit(503)
         else
             -- 未通过挑战，设置 Cookie 要求验证
-            ngx.header["Set-Cookie"] = _M.config.challenge_cookie .. "=1; Path=/; Max-Age=" .. _M.config.challenge_ttl
-            ngx.header["Content-Type"] = "text/html"
-            ngx.status = 429
-            ngx.say("<html><body>Too many requests. Please refresh.</body></html>")
-            ngx.exit(429)
-            return true
+            if cc_should_block() then
+                ngx.header["Set-Cookie"] = _M.config.challenge_cookie .. "=1; Path=/; Max-Age=" .. _M.config.challenge_ttl
+                ngx.header["Content-Type"] = "text/html"
+                ngx.status = 429
+                ngx.say("<html><body>Too many requests. Please refresh.</body></html>")
+            end
+            return cc_block_or_exit(429)
         end
         
     elseif history == 3 then
         -- 第3次：临时封禁
         _M.ban_ip(ip, 3, _M.config.ban_duration_2)
-        ngx.exit(503)
-        return true
+        return cc_block_or_exit(503)
         
     else
         -- 第4次及以上：长期封禁
         _M.ban_ip(ip, 4, _M.config.ban_duration_3)
-        ngx.exit(503)
-        return true
+        return cc_block_or_exit(503)
     end
 end
 
@@ -234,10 +249,11 @@ function _M.check()
     -- 0. 先检查是否已被封禁
     local banned, ban_level, ban_ttl = _M.is_banned(ip)
     if banned then
-        ngx.header["X-WAF-CC-Status"] = "banned"
-        ngx.header["X-WAF-CC-TTL"] = tostring(ban_ttl)
-        ngx.exit(503)
-        return true
+        if cc_should_block() then
+            ngx.header["X-WAF-CC-Status"] = "banned"
+            ngx.header["X-WAF-CC-TTL"] = tostring(ban_ttl)
+        end
+        return cc_block_or_exit(503)
     end
     
     -- 1. 获取 Bot 信号
