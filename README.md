@@ -1,6 +1,6 @@
 # ngx-lua-waf
 
-基于 OpenResty / Nginx + Lua 的轻量级 Web 应用防火墙，在原版 ngx_lua_waf 基础上合并了 `block-dangerous.conf` 的敏感路径/文件屏蔽能力，并新增**增强版 CC 防御**、**规则缓存**、**XFF 真实 IP 解析**、**CIDR 网段支持**、**Bot 信号检测**、**渐进式惩罚**等能力，形成与主流 WAF 对齐的多层防御体系。
+基于 OpenResty / Nginx + Lua 的轻量级 Web 应用防火墙，在原版 ngx_lua_waf 基础上合并了 `block-dangerous.conf` 的敏感路径/文件屏蔽能力，并新增**增强版 CC 防御**、**规则缓存**、**XFF 真实 IP 解析**、**CIDR 网段支持**、**Bot 信号检测**、**渐进式惩罚**、**按模块告警模式**、**命令行管理工具**等能力，形成与主流 WAF 对齐的多层防御体系。
 
 ---
 
@@ -29,6 +29,8 @@
 | **正则预编译缓存** | PCRE 正则复用，降低重复编译开销 |
 | **日志限流** | 同 IP 同规则 60 秒内可限制记录条数，防日志打爆磁盘 |
 | **请求体大小限制** | 默认 10MB 上限，防超大 POST DoS |
+| **按模块告警模式** | 各检测模块可独立配置 `block`（拦截）或 `log`（仅记录不拦截） |
+| **命令行管理工具** | `waf-cli` 通过文件管道管理，无需开放 HTTP 接口 |
 
 ---
 
@@ -44,6 +46,7 @@
 | CIDR 支持 | 支持 | 支持 | 支持 | 支持 |
 | 规则缓存 | 支持 | 支持 | 支持 | 支持 |
 | 威胁情报 | 支持 | 支持 | 无 | 无 |
+| 按模块告警模式 | 支持 | 支持 | 基础 | 支持 |
 | 分布式 | 全球边缘 | 区域分发 | 单机 | 单机 |
 
 **定位**：本项目增强后，在单机/小集群场景下可达到 AWS WAF + Nginx 原生防护组合 **70-80%** 的 CC 防御能力。大规模分布式场景建议配合 CDN（Cloudflare/阿里云 CDN）使用。
@@ -60,7 +63,8 @@ ngx-lua-waf/
 ├── response.lua            # 响应过滤入口（Nginx body_filter 阶段调用）
 ├── block-dangerous.conf    # 原始 Nginx 规则（已合并，可保留备用）
 ├── install.sh              # 安装脚本（仅供参考，建议手动编译新版）
-├── nginx-example.conf      # Nginx 配置示例（含共享字典）
+├── waf-cli                 # 命令行管理工具（unban/banlist/reload/stats）
+├── nginx-example.conf      # Nginx 配置示例（含共享字典和管理接口）
 ├── ANALYSIS.md             # 与主流 WAF 的详细对比分析报告
 ├── CC_DEFENSE_STRATEGY.md  # CC 防御策略建议（静态文件专项）
 ├── lib/                    # 增强功能库
@@ -182,7 +186,8 @@ TrustedProxies = {
 
 - 修改 `config.lua` 或 Lua 代码：需 `nginx -s reload`
 - 修改 `wafconf/` 下的规则文件：**无需 reload，5 秒内自动生效**（基于规则缓存 TTL）
-- 如需立即生效：访问管理接口 `/waf-admin?action=reload`（仅限内网）
+- 如需立即生效：使用命令行工具 `./waf-cli reload`（无需开放 HTTP 接口）
+- 或访问管理接口 `/waf-admin?action=reload`（仅限内网）
 
 ---
 
@@ -237,6 +242,14 @@ TrustedProxies = {
 | `CCChallengeEnabled` | string | `on` | Cookie 挑战验证开关 |
 | `CCChallengeCookie` | string | `_waf_cc` | 挑战验证 Cookie 名称 |
 | `CCChallengeTTL` | number | `300` | 挑战验证 Cookie 有效期（秒） |
+| `ActionMode` | string | `block` | 全局默认动作：`block`（拦截）/ `log`（仅记录） |
+| `CCAction` | string | `block` | CC 防御动作模式（可覆盖全局） |
+| `IPBlockAction` | string | `block` | IP 黑名单动作模式 |
+| `ArgsAction` | string | `block` | GET 参数检测动作模式 |
+| `URLAction` | string | `block` | URL 黑名单动作模式 |
+| `DangerousAction` | string | `block` | 敏感路径检测动作模式 |
+| `HeaderAction` | string | `block` | Header 攻击检测动作模式 |
+| `WafCmdDir` | string | `/tmp/waf-cmd` | 命令行工具管道目录 |
 
 ---
 
@@ -298,6 +311,53 @@ IP 黑白名单支持 `10.0.0.0/8`、`172.16.0.0/12`、`192.168.0.0/16` 等 CIDR
 ```
 原始输入 → URL Decode → HTML Entity Decode → \xNN Decode → 最终检测
 ```
+
+### 6. 按模块告警模式（ActionMode）
+
+每个检测模块可独立配置为 `block`（拦截）或 `log`（仅记录日志，不阻止请求）。
+
+**全局切换为仅告警模式：**
+```lua
+ActionMode = "log"
+```
+
+**仅让特定模块告警（其他正常拦截）：**
+```lua
+ActionMode = "block"
+CCAction = "log"              -- CC 只告警不封禁
+DangerousAction = "log"       -- 敏感路径只记录不拦截
+```
+
+告警模式下的行为：
+- 攻击日志正常写入 `*_sec.log`
+- 检测计数、Bot 评分正常执行
+- 请求**不会被拦截**，继续向后端传递
+
+### 7. 命令行管理工具（waf-cli）
+
+`waf-cli` 通过文件管道与运行中的 WAF 通信，**无需开放任何 HTTP 管理接口**，适合安全管控严格的生产环境。
+
+```bash
+# 解除指定 IP 的 CC 封禁（同时清零其历史超限记录）
+./waf-cli unban 1.2.3.4
+
+# 查看当前被封禁的 IP 列表
+./waf-cli banlist
+
+# 强制刷新规则缓存
+./waf-cli reload
+
+# 查看某 IP 的 CC 统计
+./waf-cli stats 1.2.3.4
+```
+
+**工作原理：**
+1. `waf-cli` 将请求写入 `/tmp/waf-cmd/req-xxx.json`
+2. WAF 在处理 HTTP 请求时（每秒最多检查一次）读取并执行
+3. 结果写回 `/tmp/waf-cmd/res-xxx.json`
+4. `waf-cli` 读取响应并输出
+
+> ⚠️ 需要有 HTTP 请求经过 WAF 才能触发命令处理。如果当前无流量，命令会等待直到有请求进来。
 
 ---
 
@@ -452,6 +512,7 @@ IP [时间] "方法 域名URI" "数据" "UA" "命中标记"
 | `[TRAVERSAL]` | 路径穿越/空字节 | 400 | `hit=[../../..]` |
 | `[HEADER]` | Header 层攻击（走私/伪造/注入） | 403 | `hit=[X-Forwarded-Host: evil.com]` |
 | `[RESPONSE]` | 响应敏感信息泄露（堆栈/路径/密钥） | 500 | `hit=[java.lang.NullPointerException]` |
+| `[IPBLOCK]` | IP 黑名单命中 | 403 | `hit=[1.2.3.4]` |
 | `[CC-BAN]` | CC 超限被封禁 | 503 | `ip=x.x.x.x level=3 duration=300s` |
 
 ---
@@ -523,9 +584,13 @@ ipWhitelist={"127.0.0.1","10.0.0.0/8","172.16.0.0/12"}
 
 ### Q3: 规则文件修改后需要 reload 吗？
 
-**不需要**。`wafconf/` 下的规则文件在 Worker 缓存 TTL（默认 5 秒）后自动刷新。如需立即生效，可访问内网管理接口：
+**不需要**。`wafconf/` 下的规则文件在 Worker 缓存 TTL（默认 5 秒）后自动刷新。如需立即生效：
 
 ```bash
+# 方式一：命令行工具（推荐，无需 HTTP 接口）
+./waf-cli reload
+
+# 方式二：管理接口（仅限内网）
 curl "http://localhost/waf-admin?action=reload"
 ```
 
@@ -565,9 +630,61 @@ X-WAF-CC-Limit: 200              # 阈值
 ### Q7: 如何查看某个 IP 的 CC 统计？
 
 ```bash
-# 通过管理接口查询（仅限内网）
+# 方式一：命令行工具（推荐）
+./waf-cli stats 1.2.3.4
+
+# 方式二：管理接口（仅限内网）
 curl "http://localhost/waf-admin?action=stats&ip=1.2.3.4"
 ```
+
+---
+
+### Q8: 如何解除被封禁的 IP？
+
+CC 封禁（由 `waf_ban` 共享字典管理）到期会自动释放。如需手动提前解封：
+
+```bash
+# 解除指定 IP 的 CC 封禁
+./waf-cli unban 1.2.3.4
+
+# 查看当前被封禁的 IP 列表
+./waf-cli banlist
+```
+
+如果是 `ipBlocklist` 配置导致的永久拦截，需从 `config.lua` 中移除该 IP 并 `nginx -s reload`。
+
+---
+
+### Q9: 如何只告警不拦截？
+
+**全局切换为仅告警模式**（所有模块只记录日志，不阻止请求）：
+
+```lua
+ActionMode = "log"
+```
+
+**仅让特定模块告警**（其他模块正常拦截）：
+
+```lua
+ActionMode = "block"
+CCAction = "log"              -- CC 只告警不封禁
+ArgsAction = "log"            -- GET 参数攻击只记录
+DangerousAction = "log"       -- 敏感路径只记录
+```
+
+---
+
+### Q10: CC 惩罚时间如何设置？
+
+编辑 `config.lua`：
+
+```lua
+CCBanDuration1 = 60     -- 第1次超限封禁 60 秒
+CCBanDuration2 = 300    -- 第2次封禁 5 分钟
+CCBanDuration3 = 3600   -- 第3次封禁 1 小时
+```
+
+修改后 `nginx -s reload` 生效，**只影响新触发的封禁**，已封禁的 IP 保持原时长不变。如需立即解封已有 IP，使用 `./waf-cli unban <ip>`。
 
 ---
 
