@@ -1,0 +1,158 @@
+RulePath = "/u/nginx/ngx_lua_waf/wafconf/"
+attacklog = "on"
+logdir = "/u/medsci/logs/nginx/"
+
+-- ============================================================
+-- 一键场景配置指南（修改下方 5 个开关即可）
+-- ============================================================
+-- | 场景              | BlockDangerous | BlockAggressive | CCDeny  | 说明                         |
+-- |-------------------|----------------|-----------------|---------|------------------------------|
+-- | A. 通用企业官网   | on             | off             | off     | 默认推荐，平衡安全与业务     |
+-- | B. SpringBoot/K8s | on             | off             | on      | 必须关闭 aggressive(health)  |
+-- | C. Laravel/PHP    | on             | off             | on      | 核心规则已覆盖 PHP 敏感端点  |
+-- | D. Node.js/前端   | on             | off             | on      | 同上，避免误伤 .map/.txt     |
+-- | E. 高安全/内部系统| on             | on              | on      | 最大化拦截，接受一定误伤     |
+-- ============================================================
+
+UrlDeny="on"
+Redirect="on"
+CookieMatch="on"
+postMatch="on"
+whiteModule="on"
+
+-- 上传文件黑名单扩展名
+-- PHP 站点若允许用户上传 PHP 文件（如 CMS），请从列表中移除 "php"
+black_fileExt={"php","jsp","aspx","py","sh"}
+
+-- IP 白名单：负载均衡、CDN 回源、公司出口、监控探针等
+-- 支持精确 IP 和 CIDR 网段，如 "10.0.0.0/8"
+ipWhitelist={"127.0.0.1"}
+
+-- IP 黑名单：支持精确 IP 和 CIDR 网段
+ipBlocklist={"1.0.0.1"}
+
+-- CC 防护：格式 "请求数/时间(秒)"
+-- 场景 A: off           | 场景 B/C/D: "600/60"  | 场景 E: "120/60"
+CCDeny="off"
+CCrate="120/60"
+
+-- 【block-dangerous.conf 合并规则】
+-- core   = 低误伤：Git/密钥/凭证/配置文件/技术栈敏感端点（建议所有场景开启）
+-- aggressive = 高误伤：health/metrics/debug/test/txt/py/sh/java/map（按需开启）
+BlockDangerous="on"
+BlockAggressive="off"
+
+-- 恶意 Referer（SEO 垃圾流量）
+BlockReferer="on"
+
+-- 禁止 TRACE / TRACK 方法
+BlockMethod="on"
+
+-- Header 层攻击检测（请求走私、代理伪造、Header 注入）
+BlockHeader="on"
+
+-- 响应阶段敏感信息泄露检测（错误堆栈、内部路径、密钥泄露）
+BlockResponse="on"
+
+-- ============================================================
+-- 【新增】增强功能配置
+-- ============================================================
+
+-- 规则缓存 TTL（秒），每 N 秒刷新一次规则文件
+-- 设置为 0 则每次请求都重新读取（不推荐高并发场景）
+RuleCacheTTL = 5
+
+-- X-Forwarded-For 信任代理列表（CIDR 格式）
+-- 配置前置负载均衡、CDN、WAF 的 IP 段
+TrustedProxies = {
+    -- 内网段
+    "10.0.0.0/8",
+    "172.16.0.0/12",
+    "192.168.0.0/16",
+    "127.0.0.1/32",
+    -- 阿里云 SLB（按需添加）
+    -- "100.64.0.0/10",
+    -- Cloudflare（按需添加）
+    -- "173.245.48.0/20",
+    -- "103.21.244.0/22",
+}
+
+-- 获取真实 IP 策略："left" 取 XFF 最左（默认），"right" 取最右
+-- 最左适用于标准代理链；最右适用于某些 CDN 配置
+RealIPStrategy = "left"
+
+-- ============================================================
+-- 【新增】增强 CC 防御配置
+-- ============================================================
+
+-- 启用增强 CC 防御（覆盖旧版 denycc）
+CCEnhanced = "off"
+
+-- 全站全局限制（所有请求类型总计）
+CCGlobalRate = "2000/60"
+
+-- 静态文件 CC 配置
+CCStaticEnabled = "on"
+CCStaticRate = "600/60"             -- 正常静态文件请求
+CCStaticNoRefererRate = "200/60"    -- 无 Referer 的静态请求（更严格）
+CCStaticNoCookieRate = "300/60"     -- 无 Cookie 的静态请求
+
+-- 动态请求 CC 配置
+CCDynamicRate = "120/60"            -- 普通动态页面
+CCApiRate = "300/60"                -- API 接口
+CCUploadRate = "30/60"              -- 文件上传
+
+-- POST 请求收紧系数（0.5 表示阈值减半）
+CCPostMultiplier = 0.5
+
+-- 渐进式惩罚开关
+CCProgressive = "on"
+CCBanDuration1 = 60     -- 第1次超限封禁 60 秒
+CCBanDuration2 = 300    -- 第2次封禁 5 分钟
+CCBanDuration3 = 3600   -- 第3次封禁 1 小时
+
+-- Cookie 挑战验证（防简单脚本）
+CCChallengeEnabled = "on"
+CCChallengeCookie = "_waf_cc"
+CCChallengeTTL = 300
+
+-- 日志限流：同一 IP 同一规则 60 秒内最多记录 N 条日志（0 表示不限流）
+-- 建议高并发场景设为 10-50，防止日志磁盘被打满
+LogRateLimit = 0
+
+-- ============================================================
+-- 拦截页面 HTML
+-- ============================================================
+
+html=[[
+<html xmlns="http://www.w3.org/1999/xhtml"><head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<title>网站防火墙</title>
+<style>
+p {
+	line-height:20px;
+}
+ul{ list-style-type:none;}
+li{ list-style-type:none;}
+</style>
+</head>
+
+<body style=" padding:0; margin:0; font:14px/1.5 Microsoft Yahei, 宋体,sans-serif; color:#555;">
+
+ <div style="margin: 0 auto; width:1000px; padding-top:70px; overflow:hidden;">
+  
+  
+  <div style="width:600px; float:left;">
+    <div style=" height:40px; line-height:40px; color:#fff; font-size:16px; overflow:hidden; background:#6bb3f6; padding-left:20px;">网站防火墙 </div>
+    <div style="border:1px dashed #cdcece; border-top:none; font-size:14px; background:#fff; color:#555; line-height:24px; height:220px; padding:20px 20px 0 20px; overflow-y:auto;background:#f3f7f9;">
+      <p style=" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;"><span style=" font-weight:600; color:#fc4f03;">您的请求带有不合法参数，已被网站管理员设置拦截！</span></p>
+<p style=" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;">可能原因：您提交的内容包含危险的攻击请求</p>
+<p style=" margin-top:12px; margin-bottom:12px; margin-left:0px; margin-right:0px; -qt-block-indent:1; text-indent:0px;">如何解决：</p>
+<ul style="margin-top: 0px; margin-bottom: 0px; margin-left: 0px; margin-right: 0px; -qt-list-indent: 1;"><li style=" margin-top:12px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;">1）检查提交内容；</li>
+<li style=" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;">2）如网站托管，请联系空间提供商；</li>
+<li style=" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;">3）普通网站访客，请联系网站管理员；</li></ul>
+    </div>
+  </div>
+</div>
+</body></html>
+]]

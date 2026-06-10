@@ -1,0 +1,7 @@
+\.(git|svn|htaccess|bash_history|git_combo.debug.js|_combo.js|composer-auth.json|coveralls.yml|dot|ds_store|editorconfig|empty|env|env.example|_flexible_css.debug.js|_flexible_css.js|_flexible.debug.js|_flexible.js|gitattributes|gitignore|gitkeep|gush.yml|_makegrid.debug.js|_makegrid.js|mno|_package.json|php_cs|php_cs.dist|project|psysh.php|scrutinizer.yml|stickler.yml|styleci.yml|travis.install.sh|travis.yml|unknownextension)
+\.(bak|inc|old|mdb|sql|backup|java|class)$
+(vhost|bbs|host|wwwroot|www|site|root|hytop|flashfxp).*\.rar
+(phpmyadmin|jmx-console|jmxinvokerservlet)
+java\.lang
+/(attachments|upimg|images|css|uploadfiles|html|uploads|templets|static|template|data|inc|forumdata|upload|includes|cache|avatar)/(\\w+).(php|jsp)
+

@@ -1,0 +1,6 @@
+^/123/$
+^/userAction/saveUserActionData
+^/drt-case
+^/console/api/apps/*
+^/files/upload/*
+^/\.well-known(/.*)?$

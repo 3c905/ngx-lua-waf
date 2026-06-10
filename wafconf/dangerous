@@ -1,0 +1,160 @@
+# [core]
+
+# 隐藏文件（根路径下以 . 开头的文件/目录）
+# .well-known 通过 wafconf/whiteurl 放行
+^/\..*$
+
+# Spring Boot Actuator 敏感端点（不含 health）
+^/actuator/(env|beans|heapdump|threaddump|metrics|prometheus|mappings|configprops|loggers|conditions|caches|scheduledtasks)$
+
+# Swagger / OpenAPI
+^/swagger\.json$
+^/swagger-ui(/.*)?$
+^/swagger-resources(/.*)?$
+^/v2/api-docs(/.*)?$
+^/v3/api-docs(/.*)?$
+^/openapi\.json$
+^/redoc$
+
+# phpinfo / 状态页
+^/phpinfo\.php$
+^/info\.php$
+^/nginx_status$
+^/server-status$
+
+# 调试工具
+^/debug/pprof(/.*)?$
+^/_debugbar(/.*)?$
+^/_profiler(/.*)?$
+
+# AI / Notebook / LLM Debug
+^/(gradio|streamlit|jupyter|notebook)(/.*)?$
+
+# 补充屏蔽路径
+^/(shell|cmd|webshell|c99|r57)\.
+^/wp-(login|config|admin)
+
+# 上传目录禁止执行脚本
+^/upload/.*\.(php\d*|jsp|jspx|asp|aspx|cgi|py|sh|pl|rb)$
+
+# ========== 已知高危漏洞路径 ==========
+/actuator/gateway/routes
+/actuator/gateway/refresh
+/api/v1/gateway/routes
+/ws_utc/config\.do
+/console/css/%252e
+/_async/AsyncResponseService
+/wls-wsat/CoordinatorPortType
+/invoker/readonly
+/jbossws/services
+/axis2/axis2-admin
+/solr/admin/cores
+/seeyon/htmlofficeservlet
+/weaver/bsh\.servlet\.BshServlet
+/ueditor/php/controller\.php
+/fckeditor/editor/filemanager
+/ckeditor/filemanager
+/plupload/examples/upload\.php
+/kindeditor/php/upload_json\.php
+
+# 危险文件扩展名 — 配置 / 密钥 / 数据库 / 压缩包 / PHP 备份
+\.(env|ini|conf|config|properties|yml|yaml)$
+\.(pem|key|p12|pfx|jks|keystore|truststore|kdb|csr|der)$
+\.(tf|tfvars|tfstate|tfstate\.backup)$
+\.(7z|zip|rar|tar|tgz|tbz2|txz|gz|bz2|xz|lz|lzma|zst|br)$
+\.(sql|sqlite|sqlite3|db|db3|mdb|accdb|dump|dmp|hprof|heapdump)$
+\.(php\d+|php\.bak|php~)$
+
+# 敏感文件模式 — SSH 密钥
+(id_(rsa|dsa|ecdsa|ed25519)|authorized_keys|known_hosts)$
+
+# 敏感文件模式 — 凭证 / 密钥
+(credentials|secrets?|service-account|firebase|google-services|aws-exports)\.(json|ya?ml|toml|ini|conf|cnf|properties|xml|txt)$
+
+# 敏感文件模式 — 配置文件
+(application|bootstrap|settings|config|local|production|prod|staging|stage|development|dev|test|database|db)\.(json|ya?ml|toml|ini|conf|cnf|properties|xml)$
+
+# 敏感文件模式 — 构建依赖
+(composer\.(json|lock)|package(-lock)?\.json|npm-shrinkwrap\.json|yarn\.lock|pnpm-lock\.ya?ml|bun\.lockb?|bower\.json|Gemfile(\.lock)?|go\.(mod|sum|work)|Cargo\.(toml|lock)|pom\.xml|build\.gradle(\.kts)?|settings\.gradle(\.kts)?|gradle\.properties|mvnw|gradlew|Makefile|CMakeLists\.txt|requirements(-[A-Za-z0-9_.-]+)?\.txt|Pipfile(\.lock)?|pyproject\.toml|poetry\.lock|setup\.(py|cfg)|tox\.ini|pytest\.ini|phpunit\.xml(\.dist)?|artisan|manage\.py|wsgi\.py|asgi\.py|celery\.py)$
+
+# 敏感文件模式 — Docker / CI / 进程
+(Dockerfile(\.[^/]+)?|Containerfile(\.[^/]+)?|\.dockerignore|docker-compose(\.[^/]+)?\.ya?ml|compose(\.[^/]+)?\.ya?ml|Jenkinsfile|Vagrantfile|Procfile|supervisord\.conf|ecosystem\.config\.(js|cjs|mjs|json)|pm2(\.config)?\.(js|json|ya?ml))$
+
+# 敏感文件模式 — K8s / Helm / Ansible
+(Chart\.ya?ml|values(-[A-Za-z0-9_.-]+)?\.ya?ml|kustomization\.ya?ml|helmfile\.ya?ml|ansible\.cfg|inventory(\.ini)?|playbook\.ya?ml)$
+
+# 敏感文件模式 — core dump
+(core|core\.[0-9]+)$
+
+# 依赖目录
+/(composer\.(json|lock)|vendor/)
+/(package\.json|package-lock\.json|yarn\.lock|pnpm-lock\.yaml)$
+^/(node_modules)(/.*)?$
+
+# [java]
+^/druid(/.*)?$
+^/h2-console(/.*)?$
+^/jolokia(/.*)?$
+^/sba(/.*)?$
+^/instances(/.*)?$
+^/monitoring$
+^/javamelody(/.*)?$
+
+# [nodejs]
+^/__webpack_dev_server__(/.*)?$
+^/npm-debug(/.*)?$
+^/yarn-error(/.*)?$
+^/\.env(\..+)?$
+
+# [php]
+^/_ignition(/.*)?$
+^/telescope(/.*)?$
+^/horizon(/.*)?$
+^/phpunit\.xml(\.dist)?$
+^/\.user\.ini$
+^/thinkphp(/.*)?$
+^/wp-config\.php$
+^/wp-admin/install\.php$
+^/wp-content/debug\.log$
+
+# [aggressive]
+
+# 所有 Actuator（含 health，K8s 探针会失效）
+^/actuator(/.*)?$
+
+# 极度宽泛的 debug 匹配（误伤 /api/debug-mode 等正常路径）
+^/.*debug.*/.*$
+
+# 系统功能 / 健康检查（K8s liveness/readiness 常用）
+^/system-features$
+^/health$
+^/healthz$
+^/livez$
+^/readyz$
+^/startupz$
+
+# 状态 / Metrics（Prometheus 监控常用）
+^/status$
+^/metrics(/.*)?$
+^/prometheus$
+
+# 根路径敏感/调试目录（test 太常见，易误伤）
+^/(backup|backups|test|tests|debug|tmp|temp|logs|dev|staging|sandbox)(/.*)?$
+
+# 所有非 robots.txt 的 txt（误伤 /license.txt /changelog.txt 等）
+/(?!robots).*\.txt$
+
+# 脚本 / 源码 / SourceMap 扩展名（技术类/代码分享站点会误伤）
+\.(java|class|jar|war)$
+\.(py|pyc|pyo)$
+\.(sh|bash|zsh|ksh|csh)$
+\.map$
+
+# 日志扩展名（若业务提供日志下载会误伤）
+\.(log|trace|out|err)$
+
+# 备份 / 临时 / 示例扩展名（.dist / .sample 常用于配置示例）
+.*(~|\.bak|\.backup|\.old|\.orig|\.save|\.swp|\.swo|\.tmp|\.temp|\.copy|\.disabled|\.dist|\.sample|\.example)$
+
+# 备份目录（old 目录太常见，如 /products/old/）
+(backup|backups|bak|dump|dumps|old)([._-]?[0-9]{4}[0-9._-]*)?(/|$)

@@ -1,0 +1,61 @@
+# [core]
+
+# Java 堆栈跟踪
+java\.lang\.(NullPointerException|IllegalArgumentException|RuntimeException|Exception|Error)
+at\s+(java|sun|org|com|net|io)\.[\w.]+\.[\w]+\(
+
+# Python 堆栈
+Traceback\s+\(most\s+recent\s+call\s+last\)
+File\s+\".+\",\s+line\s+\d+
+
+# PHP 错误
+Fatal\s+error:
+Parse\s+error:
+Warning:\s+.*in\s+.*on\s+line\s+\d+
+Notice:\s+.*in\s+.*on\s+line\s+\d+
+
+# .NET 错误
+Server\s+Error\s+in\s+'\/'\s+Application
+System\.(NullReferenceException|ArgumentException|Web\.HttpException)
+
+# 数据库错误
+ORA-\d{5}
+SQLSTATE\[\w+\]
+MySQL\s+server\s+has\s+gone\s+away
+PostgreSQL\s+query\s+failed
+MongoDB\s+Error
+
+# 内部路径泄露
+/home/\w+/
+/var/www/
+/usr/local/\w+/
+/opt/\w+/
+C:\\\w+\\
+D:\\\w+\\
+/etc/\w+/
+/root/
+
+# 数据库连接串泄露
+jdbc:mysql://
+jdbc:oracle://
+jdbc:postgresql://
+mongodb://
+redis://
+mysql://
+postgres://
+
+# 密钥 / Token 泄露
+-----BEGIN\s+(RSA\s+PRIVATE\s+KEY|PRIVATE\s+KEY|OPENSSH\s+PRIVATE\s+KEY)
+-----BEGIN\s+CERTIFICATE-----
+(A3T[A-Z0-9]|AKIA|AGPA|AROA|AIPA|ANPA|ANVA|ASIA)[A-Z0-9]{16}
+sk-[a-zA-Z0-9]{48}
+ghp_[a-zA-Z0-9]{36}
+github_pat_[a-zA-Z0-9]{22}_[a-zA-Z0-9]{59}
+
+# 框架指纹 / 版本泄露
+(X-Powered-By|X-AspNet-Version|X-Generator|Server):
+Drupal\s+\d+\.\d+
+WordPress\s+\d+\.\d+
+Joomla!\s+\d+\.\d+
+Laravel\s+\d+\.\d+
+ThinkPHP\s+\d+\.\d+

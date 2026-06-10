@@ -1,0 +1,137 @@
+\.\./
+\:\$
+\$\{
+select.+(from|limit)
+(?:(union(.*?)select))
+having|rongjitest
+sleep\((\s*)(\d*)(\s*)\)
+benchmark\((.*)\,(.*)\)
+base64_decode\(
+(?:from\W+information_schema\W)
+(?:(?:current_)user|database|schema|connection_id)\s*\(
+(?:etc\/\W*passwd)
+into(\s+)+(?:dump|out)file\s*
+group\s+by.+\(
+(?:define|eval|file_get_contents|include|require|require_once|shell_exec|phpinfo|system|passthru|preg_\w+|execute|echo|print|print_r|var_dump|(fp)open|alert|showmodaldialog)\(
+xwork\.MethodAccessor
+(gopher|doc|php|glob|file|phar|zlib|ftp|ldap|dict|ogg|data)\:\/
+java\.lang
+\$_(GET|post|cookie|files|session|env|phplib|GLOBALS|SERVER)\[
+\<(iframe|script|body|img|layer|div|meta|style|base|object|input)
+(onmouseover|onerror|onload)\=
+
+# Log4Shell / JNDI 注入 (CVE-2021-44228)
+\$\{jndi:(ldap|dns|rmii|iiop|http|https|nis|corba|nds)
+
+# Spring4Shell (CVE-2022-22965)
+class\.module\.classLoader
+
+# XXE
+<!ENTITY
+<!DOCTYPE.*SYSTEM
+
+# NoSQL 注入
+\[\$where\]
+"\$ne"
+"\$gt"
+"\$regex"
+
+# 命令注入 - 反引号与 $()
+`.*`
+\$\(.*\)
+
+# SSRF 补充协议
+(imap|smtp|pop3|tftp):\/
+
+# 路径穿越编码变种
+\.\.%2f
+%252e%252e
+%c0%ae%c0%ae
+
+# MySQL 注释绕过
+/\*!50000
+
+# JWT none 算法攻击
+"alg"\s*:\s*"none"
+
+# PHP 伪协议
+php://filter
+php://input
+
+# Java RMI / JMX
+java\.rmi
+javax\.management
+
+# ========== 现代 SQL 注入补充 ==========
+# 时间盲注函数
+pg_sleep\s*\(
+waitfor\s+delay\s+
+dbms_pipe\.receive_message\s*\(
+
+# 报错注入
+extractvalue\s*\(
+updatexml\s*\(
+
+# 堆叠查询
+;\s*(drop|delete|insert|update|create|alter)\s+
+
+# INTO OUTFILE / DUMPFILE
+into\s+(outfile|dumpfile)\s+
+
+# LOAD_FILE
+load_file\s*\(
+
+# 十六进制拼接绕过
+0x[0-9a-fA-F]{10,}
+
+# ========== XSS 补充 ==========
+# SVG / MathML / iframe srcdoc
+<svg\s+on\w+
+<math\s+on\w+
+<iframe\s+.*srcdoc
+
+# DOM XSS / 伪协议
+data:text/html;base64,
+document\.(cookie|write|location)
+window\.(open|location)
+
+# ========== 命令注入补充 ==========
+# DNS 外带 (OOB)
+\.(burpcollaborator\.net|interact\.sh|dnslog\.cn|ceye\.io|xip\.io|nip\.io)
+
+# 常见一句话下载执行
+(curl|wget).*-O.*\|
+(curl|wget).*\|.*(bash|sh|cmd|powershell)
+
+# ========== 反序列化补充 ==========
+# Fastjson/Jackson 危险类
+"@type"\s*:\s*"com\.sun\.
+"@type"\s*:\s*"java\.lang\.(Runtime|ProcessBuilder)
+"@type"\s*:\s*"org\.apache\.(commons|ibatis|logging)
+
+# PHP 序列化特征
+O:\d+:"[^"]+":\d+:\{
+
+# Java Base64 魔术头
+rO0ABX
+
+# .NET 序列化
+AAEAAAD
+
+# ========== SSRF 内网 IP ==========
+(127\.0\.0\.1|0\.0\.0\.0|localhost|10\.\d{1,3}\.\d{1,3}\.\d{1,3}|172\.(1[6-9]|2\d|3[01])\.\d{1,3}\.\d{1,3}|192\.168\.\d{1,3}\.\d{1,3})
+
+# ========== 模板注入 (SSTI) ==========
+\$\{.*class.*\}
+\$\{.*runtime.*\}
+\$\{.*system.*\}
+\$\{.*process.*\}
+\$\{.*T\(.*\)\}
+\#\{.*\}
+
+# ========== 文件上传绕过 ==========
+# 双扩展名
+\.(php\d?|jsp|aspx|py|sh|pl|rb)\.(jpg|jpeg|png|gif|bmp|txt|pdf|doc|zip)
+
+# 图片马特征
+GIF89a.*<\?php

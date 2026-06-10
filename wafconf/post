@@ -1,0 +1,97 @@
+(?:(union(.*?)select))
+having|rongjitest
+sleep\((\s*)(\d*)(\s*)\)
+benchmark\((.*)\,(.*)\)
+base64_decode\(
+(?:from\W+information_schema\W)
+(?:(?:current_)user|database|schema|connection_id)\s*\(
+(?:etc\/\W*passwd)
+into(\s+)+(?:dump|out)file\s*
+group\s+by.+\(
+(?:define|eval|file_get_contents|include|require|require_once|shell_exec|phpinfo|system|passthru|preg_\w+|execute|echo|print|print_r|var_dump|(fp)open|alert|showmodaldialog)\(
+xwork\.MethodAccessor
+(gopher|doc|php|glob|file|phar|zlib|ftp|ldap|dict|ogg|data)\:\/
+java\.lang
+\$_(GET|post|cookie|files|session|env|phplib|GLOBALS|SERVER)\[
+\<(iframe|script|body|img|layer|div|meta|style|base|object|input)
+(onmouseover|onerror|onload)\=
+
+# Log4Shell / JNDI 注入 (CVE-2021-44228)
+\$\{jndi:(ldap|dns|rmii|iiop|http|https|nis|corba|nds)
+
+# Spring4Shell (CVE-2022-22965)
+class\.module\.classLoader
+
+# XXE
+<!ENTITY
+<!DOCTYPE.*SYSTEM
+
+# NoSQL 注入
+\[\$where\]
+"\$ne"
+"\$gt"
+"\$regex"
+
+# 命令注入 - 反引号与 $()
+`.*`
+\$\(.*\)
+
+# SSRF 补充协议
+(imap|smtp|pop3|tftp):\/
+
+# MySQL 注释绕过
+/\*!50000
+
+# JWT none 算法攻击
+"alg"\s*:\s*"none"
+
+# PHP 伪协议
+php://filter
+php://input
+
+# ========== 现代 SQL 注入补充 ==========
+pg_sleep\s*\(
+waitfor\s+delay\s+
+dbms_pipe\.receive_message\s*\(
+extractvalue\s*\(
+updatexml\s*\(
+;\s*(drop|delete|insert|update|create|alter)\s+
+into\s+(outfile|dumpfile)\s+
+load_file\s*\(
+0x[0-9a-fA-F]{10,}
+
+# ========== XSS 补充 ==========
+<svg\s+on\w+
+<math\s+on\w+
+<iframe\s+.*srcdoc
+data:text/html;base64,
+document\.(cookie|write|location)
+window\.(open|location)
+
+# ========== 命令注入 / OOB ==========
+\.(burpcollaborator\.net|interact\.sh|dnslog\.cn|ceye\.io|xip\.io|nip\.io)
+(curl|wget).*-O.*\|
+(curl|wget).*\|.*(bash|sh|cmd|powershell)
+
+# ========== 反序列化补充 ==========
+"@type"\s*:\s*"com\.sun\.
+"@type"\s*:\s*"java\.lang\.(Runtime|ProcessBuilder)
+"@type"\s*:\s*"org\.apache\.(commons|ibatis|logging)
+O:\d+:"[^"]+":\d+:\{
+rO0ABX
+AAEAAAD
+
+# ========== SSRF 内网 IP ==========
+(127\.0\.0\.1|0\.0\.0\.0|localhost|10\.\d{1,3}\.\d{1,3}\.\d{1,3}|172\.(1[6-9]|2\d|3[01])\.\d{1,3}\.\d{1,3}|192\.168\.\d{1,3}\.\d{1,3})
+
+# ========== 模板注入 (SSTI) ==========
+\$\{.*class.*\}
+\$\{.*runtime.*\}
+\$\{.*system.*\}
+\$\{.*process.*\}
+\$\{.*T\(.*\)\}
+\#\{.*\}
+
+# ========== 文件上传绕过 ==========
+\.(php\d?|jsp|aspx|py|sh|pl|rb)\.(jpg|jpeg|png|gif|bmp|txt|pdf|doc|zip)
+GIF89a.*<\?php

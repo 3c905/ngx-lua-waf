@@ -1,0 +1,38 @@
+# [core]
+
+# 代理伪造 / IP 欺骗（攻击者伪造代理头绕过 IP 限制）
+^X-Forwarded-Host:
+^X-Real-IP:
+^X-Originating-IP:
+^X-Remote-IP:
+^X-Remote-Addr:
+^True-Client-IP:
+^Client-IP:
+^X-Forwarded-For:.*(127\.0\.0\.1|0\.0\.0\.0|10\.\d{1,3}\.\d{1,3}\.\d{1,3}|172\.(1[6-9]|2\d|3[01])\.\d{1,3}\.\d{1,3}|192\.168\.\d{1,3}\.\d{1,3})
+
+# HTTP 请求走私
+^Transfer-Encoding:
+
+# Header 注入攻击（SQLi / XSS 载荷植入 Header）
+sleep\(
+benchmark\(
+union\s+select
+drop\s+table
+<script
+javascript:
+\$\{jndi:
+
+# DoS / 超大请求
+^Content-Length:\s*(9\d{8}|\d{10,})
+
+# CRLF 注入（Header 值中包含换行符）
+\n
+\r
+
+# [aggressive]
+
+# 所有 X-Forwarded-* 头（激进模式：正常反向代理场景会误伤）
+^X-Forwarded-
+
+# 所有自定义 IP 头（激进模式）
+^X-.*-IP:
