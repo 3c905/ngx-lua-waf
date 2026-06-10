@@ -1,0 +1,73 @@
+#!/bin/bash
+# ============================================================
+# WAF 命令行管理工具
+# 通过文件管道与运行中的 WAF 通信，无需开放 HTTP 接口
+# ============================================================
+
+CMD_DIR="/tmp/waf-cmd"
+TIMEOUT=5   # 等待响应超时时间（秒）
+
+mkdir -p "$CMD_DIR"
+
+CMD="$1"
+IP="$2"
+ID="$$_$(date +%s%N 2>/dev/null || echo $$)"
+REQ_FILE="$CMD_DIR/req-$ID.json"
+RES_FILE="$CMD_DIR/res-$ID.json"
+
+usage() {
+    echo "WAF Command Line Tool"
+    echo ""
+    echo "Usage:"
+    echo "  $(basename "$0") unban <ip>     解除指定 IP 的 CC 封禁"
+    echo "  $(basename "$0") banlist        查看当前被封禁的 IP 列表"
+    echo "  $(basename "$0") reload         强制刷新 WAF 规则缓存"
+    echo "  $(basename "$0") stats <ip>     查看指定 IP 的 CC 统计"
+    echo ""
+    echo "Examples:"
+    echo "  $(basename "$0") unban 1.2.3.4"
+    echo "  $(basename "$0") banlist | jq '.data[] | {ip, remain}'"
+    exit 1
+}
+
+case "$CMD" in
+    unban)
+        if [ -z "$IP" ]; then
+            echo "Error: ip required" >&2
+            usage
+        fi
+        printf '{"cmd":"unban","ip":"%s","id":"%s"}\n' "$IP" "$ID" > "$REQ_FILE"
+        ;;
+    banlist)
+        printf '{"cmd":"banlist","id":"%s"}\n' "$ID" > "$REQ_FILE"
+        ;;
+    reload)
+        printf '{"cmd":"reload","id":"%s"}\n' "$ID" > "$REQ_FILE"
+        ;;
+    stats)
+        if [ -z "$IP" ]; then
+            echo "Error: ip required" >&2
+            usage
+        fi
+        printf '{"cmd":"stats","ip":"%s","id":"%s"}\n' "$IP" "$ID" > "$REQ_FILE"
+        ;;
+    *)
+        usage
+        ;;
+esac
+
+# 等待响应
+WAIT_MS=$((TIMEOUT * 10))
+for i in $(seq 1 $WAIT_MS); do
+    if [ -f "$RES_FILE" ]; then
+        cat "$RES_FILE"
+        rm -f "$RES_FILE"
+        exit 0
+    fi
+    sleep 0.1
+done
+
+# 超时：清理请求文件并返回错误
+rm -f "$REQ_FILE"
+echo '{"status":"error","message":"timeout waiting for WAF response. ensure nginx is running with WAF loaded, and requests are being processed."}'
+exit 1

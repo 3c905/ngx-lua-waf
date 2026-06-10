@@ -384,4 +384,68 @@ function _M.get_stats(ip)
     return stats
 end
 
+-- ============================================================
+-- 手动解除封禁
+-- ============================================================
+
+function _M.unban_ip(ip)
+    local ban_dict = get_dict(DICT_BAN)
+    local cc_dict = get_dict(DICT_CC)
+    if not ban_dict or not cc_dict then
+        return false, "shared dict not available"
+    end
+    
+    if not ip or ip == "" then
+        return false, "ip required"
+    end
+    
+    -- 从封禁字典中删除
+    ban_dict:delete(ip)
+    
+    -- 同时清理该 IP 的历史超限记录（可选，让其重新开始）
+    cc_dict:delete("hist:" .. ip)
+    
+    -- 记录解除日志
+    local time = ngx.localtime()
+    local msg = string.format("[CC-UNBAN] ip=%s time=%s\n", ip, time)
+    local logpath = logdir or "/tmp"
+    local filename = logpath .. "/cc_ban.log"
+    local fd = io.open(filename, "ab")
+    if fd then
+        fd:write(msg)
+        fd:close()
+    end
+    
+    return true
+end
+
+-- ============================================================
+-- 获取当前封禁列表
+-- ============================================================
+
+function _M.get_ban_list()
+    local ban_dict = get_dict(DICT_BAN)
+    if not ban_dict then
+        return nil, "shared dict not available"
+    end
+    
+    local list = {}
+    local keys = ban_dict:get_keys(0)  -- 0 = 获取所有 key
+    
+    for _, ip in ipairs(keys) do
+        local level = ban_dict:get(ip)
+        local ttl = ban_dict:ttl(ip) or 0
+        if level then
+            table.insert(list, {
+                ip = ip,
+                level = level,
+                ttl = ttl,
+                remain = math.max(0, math.floor(ttl))
+            })
+        end
+    end
+    
+    return list
+end
+
 return _M

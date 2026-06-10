@@ -138,3 +138,128 @@ elseif PostCheck then
 else
     return
 end
+
+-- ============================================================
+-- 命令行管理工具：文件管道处理
+-- ============================================================
+-- 命令行工具 waf-cli 通过 /tmp/waf-cmd/ 目录下的文件与 WAF 通信
+-- 无需开放 HTTP 接口，适合安全管控严格的生产环境
+
+local function simple_json_encode(obj)
+    local t = type(obj)
+    if t == "string" then
+        return string.format("%q", obj)
+    elseif t == "number" or t == "boolean" then
+        return tostring(obj)
+    elseif t == "table" then
+        local parts = {}
+        if #obj > 0 then
+            for _, v in ipairs(obj) do
+                table.insert(parts, simple_json_encode(v))
+            end
+            return "[" .. table.concat(parts, ",") .. "]"
+        else
+            for k, v in pairs(obj) do
+                table.insert(parts, string.format("%q:%s", k, simple_json_encode(v)))
+            end
+            return "{" .. table.concat(parts, ",") .. "}"
+        end
+    end
+    return "null"
+end
+
+local function process_waf_cli_commands()
+    local cmd_dir = WafCmdDir
+    if not cmd_dir then return end
+
+    -- 频率限制：每 1 秒最多检查一次，避免每次请求都执行 ls
+    local dict = ngx.shared.limit
+    if dict then
+        local last = dict:get("waf_cmd_last_check") or 0
+        local now = ngx.now()
+        if now - last < 1 then
+            return
+        end
+        dict:set("waf_cmd_last_check", now)
+    end
+
+    -- 读取请求文件列表
+    local fd = io.popen("ls " .. cmd_dir .. "/req-*.json 2>/dev/null")
+    if not fd then return end
+
+    for req_file in fd:lines() do
+        local req_fd = io.open(req_file, "r")
+        if req_fd then
+            local content = req_fd:read("*a")
+            req_fd:close()
+
+            -- 解析简单 JSON
+            local cmd = string.match(content, '"cmd"%s*:%s*"([^"]+)"')
+            local id = string.match(content, '"id"%s*:%s*"([^"]+)"') or "unknown"
+            local ip = string.match(content, '"ip"%s*:%s*"([^"]+)"')
+
+            local res = {status = "ok"}
+
+            if cmd == "unban" and ip then
+                local cc = require "cc_enhanced"
+                local ok, err = cc.unban_ip(ip)
+                if not ok then
+                    res.status = "error"
+                    res.message = err or "unban failed"
+                else
+                    res.message = "ip unbanned"
+                    res.ip = ip
+                end
+
+            elseif cmd == "banlist" then
+                local cc = require "cc_enhanced"
+                local list, err = cc.get_ban_list()
+                if list then
+                    res.count = #list
+                    res.data = list
+                else
+                    res.status = "error"
+                    res.message = err or "failed to get banlist"
+                end
+
+            elseif cmd == "reload" then
+                local ok = waf_reload_rules()
+                if ok then
+                    res.message = "rules reloaded"
+                else
+                    res.status = "error"
+                    res.message = "reload failed"
+                end
+
+            elseif cmd == "stats" and ip then
+                local cc = require "cc_enhanced"
+                local stats = cc.get_stats(ip)
+                if stats then
+                    res.data = stats
+                else
+                    res.status = "error"
+                    res.message = "no stats available"
+                end
+
+            else
+                res.status = "error"
+                res.message = "unknown command or missing parameters"
+            end
+
+            -- 写入响应文件
+            local res_file = cmd_dir .. "/res-" .. id .. ".json"
+            local res_fd = io.open(res_file, "w")
+            if res_fd then
+                res_fd:write(simple_json_encode(res))
+                res_fd:close()
+            end
+
+            -- 删除请求文件
+            os.remove(req_file)
+        end
+    end
+
+    fd:close()
+end
+
+process_waf_cli_commands()
