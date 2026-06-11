@@ -48,7 +48,13 @@ end
 -- 全局配置变量（保持向后兼容）
 -- ============================================================
 logpath = logdir and string.gsub(logdir, "\r$", "") or "/tmp"
+if logpath ~= "/" and string.sub(logpath, -1) == "/" then
+    logpath = string.sub(logpath, 1, -2)
+end
 rulepath = RulePath and string.gsub(RulePath, "\r$", "") or "/tmp/"
+if rulepath ~= "/" and string.sub(rulepath, -1) ~= "/" then
+    rulepath = rulepath .. "/"
+end
 UrlDeny = optionIsOn(UrlDeny)
 PostCheck = optionIsOn(postMatch)
 CookieCheck = optionIsOn(cookieMatch)
@@ -100,25 +106,26 @@ end
 function write(logfile, msg)
     local fd, err = io.open(logfile, "ab")
     if fd == nil then
-        ngx.log(ngx.ERR, "WAF write() failed to open ", logfile, ": ", tostring(err))
-        return
+        ngx.log(ngx.ERR, "WAF_WRITE_FAIL: file=", logfile, " err=", tostring(err), " ip=", getClientIp(), " uri=", ngx.var.request_uri)
+        return false, err
     end
     fd:write(msg)
     fd:flush()
     fd:close()
+    return true
 end
 
 function log(method, url, data, ruletag)
     if not attacklog then
+        ngx.log(ngx.ERR, "WAF_LOG_SKIP: attacklog=off ip=", getClientIp(), " uri=", ngx.var.request_uri, " rule=", ruletag)
         return
     end
     
     local realIp = getClientIp()
     local ua = ngx.var.http_user_agent
-    local servername = ngx.var.server_name
+    local servername = ngx.var.server_name or "_"
     local time = ngx.localtime()
     local filename = logpath .. "/" .. servername .. "_" .. ngx.today() .. "_sec.log"
-    ngx.log(ngx.ERR, "WAF_LOG: filename=", filename)
     
     -- 日志限流检查
     if LogRateLimit and LogRateLimit > 0 then
@@ -129,6 +136,7 @@ function log(method, url, data, ruletag)
         
         local current = log_limiter[window_key] or 0
         if current >= LogRateLimit then
+            ngx.log(ngx.ERR, "WAF_LOG_RATELIMIT: key=", window_key, " limit=", LogRateLimit)
             return  -- 超过限流阈值，丢弃日志
         end
         log_limiter[window_key] = current + 1
@@ -150,8 +158,13 @@ function log(method, url, data, ruletag)
     else
         line = realIp .. " [" .. time .. "] \"" .. method .. " " .. servername .. url .. "\" \"" .. (data or "-") .. "\" - \"" .. ruletag .. "\"\n"
     end
-    local filename = logpath .. '/' .. servername .. "_" .. ngx.today() .. "_sec.log"
-    write(filename, line)
+    
+    local ok, err = write(filename, line)
+    if ok then
+        ngx.log(ngx.ERR, "WAF_LOG_OK: file=", filename, " line=", string.gsub(line, "\n", ""))
+    else
+        ngx.log(ngx.ERR, "WAF_LOG_FAIL: file=", filename, " err=", tostring(err), " line=", string.gsub(line, "\n", ""))
+    end
 end
 
 -- ============================================================
@@ -180,6 +193,27 @@ refererrules = read_rule('referer')
 methodrules = read_rule('method')
 headerrules = read_rule('header')
 responserules = read_rule('response')
+
+-- 规则加载汇总日志（方便排查规则文件是否加载成功）
+local function rule_count(rules)
+    if not rules then return "nil" end
+    local c = 0
+    for _ in pairs(rules) do c = c + 1 end
+    return tostring(c)
+end
+
+ngx.log(ngx.ERR, "WAF_RULES_LOADED: url=" .. rule_count(urlrules),
+        " args=" .. rule_count(argsrules),
+        " ua=" .. rule_count(uarules),
+        " whiteurl=" .. rule_count(wturlrules),
+        " post=" .. rule_count(postrules),
+        " cookie=" .. rule_count(ckrules),
+        " dangerous=" .. rule_count(dgrules),
+        " referer=" .. rule_count(refererrules),
+        " method=" .. rule_count(methodrules),
+        " header=" .. rule_count(headerrules),
+        " response=" .. rule_count(responserules),
+        " rulepath=" .. tostring(rulepath or "nil"))
 
 -- ============================================================
 -- 动作模式判断：是否拦截
@@ -406,6 +440,7 @@ function denycc()
         local req, _ = limit:get(token)
         if req then
             if req > CCcount then
+                log('GET', ngx.var.request_uri, "-", "[CC][503] hit=[count=" .. tostring(req) .. "/limit=" .. tostring(CCcount) .. "] token=" .. token)
                 if should_block("CCAction") then
                     return ngx.exit(503)
                 end

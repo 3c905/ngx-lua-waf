@@ -200,6 +200,9 @@ local function apply_progressive_penalty(ip, uri, req_type)
     -- 根据历史次数选择惩罚
     if history == 1 then
         -- 第1次：503 服务不可用
+        if log then
+            log('GET', ngx.var.request_uri, "-", "[CC-ENHANCED][503] penalty=[first] history=" .. tostring(history) .. " ip=" .. ip)
+        end
         return cc_block_or_exit(503)
         
     elseif history == 2 and _M.config.challenge_enabled then
@@ -208,6 +211,9 @@ local function apply_progressive_penalty(ip, uri, req_type)
         if challenge_passed and challenge_passed == "1" then
             -- 已通过挑战，但频率仍过高，封禁短时间
             _M.ban_ip(ip, 2, _M.config.ban_duration_1)
+            if log then
+                log('GET', ngx.var.request_uri, "-", "[CC-ENHANCED][503] penalty=[ban-short] history=" .. tostring(history) .. " ip=" .. ip)
+            end
             return cc_block_or_exit(503)
         else
             -- 未通过挑战，设置 Cookie 要求验证
@@ -217,17 +223,26 @@ local function apply_progressive_penalty(ip, uri, req_type)
                 ngx.status = 429
                 ngx.say("<html><body>Too many requests. Please refresh.</body></html>")
             end
+            if log then
+                log('GET', ngx.var.request_uri, "-", "[CC-ENHANCED][429] penalty=[challenge] history=" .. tostring(history) .. " ip=" .. ip)
+            end
             return cc_block_or_exit(429)
         end
         
     elseif history == 3 then
         -- 第3次：临时封禁
         _M.ban_ip(ip, 3, _M.config.ban_duration_2)
+        if log then
+            log('GET', ngx.var.request_uri, "-", "[CC-ENHANCED][503] penalty=[ban-medium] history=" .. tostring(history) .. " ip=" .. ip)
+        end
         return cc_block_or_exit(503)
         
     else
         -- 第4次及以上：长期封禁
         _M.ban_ip(ip, 4, _M.config.ban_duration_3)
+        if log then
+            log('GET', ngx.var.request_uri, "-", "[CC-ENHANCED][503] penalty=[ban-long] history=" .. tostring(history) .. " ip=" .. ip)
+        end
         return cc_block_or_exit(503)
     end
 end
@@ -249,6 +264,11 @@ function _M.check()
     -- 0. 先检查是否已被封禁
     local banned, ban_level, ban_ttl = _M.is_banned(ip)
     if banned then
+        if log then
+            log('GET', ngx.var.request_uri, "-", "[CC-ENHANCED][503] hit=[banned] level=" .. tostring(ban_level) .. " ttl=" .. tostring(ban_ttl) .. " ip=" .. ip)
+        else
+            ngx.log(ngx.ERR, "WAF_CC_BAN_HIT: ip=", ip, " level=", ban_level, " ttl=", ban_ttl)
+        end
         if cc_should_block() then
             ngx.header["X-WAF-CC-Status"] = "banned"
             ngx.header["X-WAF-CC-TTL"] = tostring(ban_ttl)
@@ -266,6 +286,11 @@ function _M.check()
     local global_key = "global:" .. ip
     local global_hit, global_count, global_limit = check_counter(cc_dict, global_key, _M.config.global_rate, bot)
     if global_hit then
+        if log then
+            log('GET', ngx.var.request_uri, "-", "[CC-ENHANCED][503] hit=[global-limit] count=" .. tostring(global_count) .. " limit=" .. tostring(global_limit) .. " ip=" .. ip)
+        else
+            ngx.log(ngx.ERR, "WAF_CC_GLOBAL_HIT: ip=", ip, " count=", global_count, " limit=", global_limit)
+        end
         -- 全站超限是最严重的，直接惩罚
         ngx.header["X-WAF-CC-Status"] = "global-limit"
         ngx.header["X-WAF-CC-Count"] = tostring(global_count)
@@ -328,6 +353,11 @@ function _M.check()
     -- 执行分类计数
     local type_hit, type_count, type_limit = check_counter(cc_dict, type_key, type_rate, bot)
     if type_hit then
+        if log then
+            log('GET', ngx.var.request_uri, "-", "[CC-ENHANCED][503] hit=[" .. req_type .. "-limit] count=" .. tostring(type_count) .. " limit=" .. tostring(type_limit) .. " key=" .. type_key)
+        else
+            ngx.log(ngx.ERR, "WAF_CC_TYPE_HIT: ip=", ip, " type=", req_type, " count=", type_count, " limit=", type_limit)
+        end
         ngx.header["X-WAF-CC-Status"] = req_type .. "-limit"
         ngx.header["X-WAF-CC-Count"] = tostring(type_count)
         ngx.header["X-WAF-CC-Limit"] = tostring(type_limit)
