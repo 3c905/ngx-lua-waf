@@ -5,7 +5,7 @@ local utils = require "utils"
 -- 防御性兜底：init_by_lua 阶段可能未正确加载 attacklog
 if attacklog == nil or attacklog == false then
     attacklog = true
-    ngx.log(ngx.ERR, "WAF_FALLBACK: attacklog was nil/false in access phase, forced to true. ",
+    waf_debug("WAF_FALLBACK: attacklog was nil/false in access phase, forced to true. ",
             "init.lua may need nginx restart to take effect.")
 end
 
@@ -19,7 +19,7 @@ local user_agent = ngx.var.http_user_agent or "-"
 -- ============================================================
 -- 请求入口跟踪日志
 -- ============================================================
-ngx.log(ngx.ERR, "WAF_ENTRY: ip=", client_ip,
+waf_debug("WAF_ENTRY: ip=", client_ip,
         " method=", method,
         " uri=", request_uri,
         " ua=", user_agent,
@@ -30,7 +30,7 @@ ngx.log(ngx.ERR, "WAF_ENTRY: ip=", client_ip,
 local MAX_BODY_SIZE = 10 * 1024 * 1024
 if content_length and content_length > MAX_BODY_SIZE then
     if method == "POST" or method == "PUT" or method == "PATCH" then
-        ngx.log(ngx.ERR, "WAF_BODYLIMIT: ip=", client_ip, " uri=", request_uri, " size=", content_length)
+        waf_debug("WAF_BODYLIMIT: ip=", client_ip, " uri=", request_uri, " size=", content_length)
         log(method, request_uri, "-", "[BODYLIMIT][413] size=" .. tostring(content_length) .. " max=" .. tostring(MAX_BODY_SIZE))
         if should_block and should_block("BodyLimitAction") then
             ngx.status = 413
@@ -42,16 +42,16 @@ end
 
 local function check(name, result)
     if result then
-        ngx.log(ngx.ERR, "WAF_BLOCK: module=", name, " ip=", client_ip, " uri=", request_uri)
+        waf_debug("WAF_BLOCK: module=", name, " ip=", client_ip, " uri=", request_uri)
         return true
     else
-        ngx.log(ngx.ERR, "WAF_PASS: module=", name, " ip=", client_ip, " uri=", request_uri)
+        waf_debug("WAF_PASS: module=", name, " ip=", client_ip, " uri=", request_uri)
         return false
     end
 end
 
 if whiteip() then
-    ngx.log(ngx.ERR, "WAF_WHITEIP: ip=", client_ip, " uri=", request_uri)
+    waf_debug("WAF_WHITEIP: ip=", client_ip, " uri=", request_uri)
     return
 elseif check("blockip", blockip()) then
     return
@@ -60,7 +60,7 @@ elseif check("methodcheck", methodcheck()) then
 elseif check("traversal", traversal()) then
     return
 elseif whiteurl() then
-    ngx.log(ngx.ERR, "WAF_WHITEURL: ip=", client_ip, " uri=", request_uri)
+    waf_debug("WAF_WHITEURL: ip=", client_ip, " uri=", request_uri)
     return
 elseif check("headers", headers()) then
     return
@@ -93,7 +93,7 @@ elseif PostCheck then
             local len = string.len
             local sock, err = ngx.req.socket()
             if not sock then
-                ngx.log(ngx.ERR, "WAF_POST_SOCK_FAIL: ip=", client_ip, " err=", tostring(err))
+                waf_debug("WAF_POST_SOCK_FAIL: ip=", client_ip, " err=", tostring(err))
                 return
             end
             ngx.req.init_body(128 * 1024)
@@ -108,12 +108,12 @@ elseif PostCheck then
                 local data, err, partial = sock:receive(chunk_size)
                 data = data or partial
                 if not data then
-                    ngx.log(ngx.ERR, "WAF_POST_READ_FAIL: ip=", client_ip, " err=", tostring(err))
+                    waf_debug("WAF_POST_READ_FAIL: ip=", client_ip, " err=", tostring(err))
                     return
                 end
                 size = size + len(data)
             end
-            ngx.log(ngx.ERR, "WAF_POST_MULTIPART_PASS: ip=", client_ip, " uri=", request_uri, " size=", size)
+            waf_debug("WAF_POST_MULTIPART_PASS: ip=", client_ip, " uri=", request_uri, " size=", size)
         else
             ngx.req.read_body()
             local args = ngx.req.get_post_args()
@@ -147,12 +147,12 @@ elseif PostCheck then
                         end
                     end
                 end
-                ngx.log(ngx.ERR, "WAF_POST_BODY_PASS: ip=", client_ip, " uri=", request_uri)
+                waf_debug("WAF_POST_BODY_PASS: ip=", client_ip, " uri=", request_uri)
             else
-                ngx.log(ngx.ERR, "WAF_POST_NOARGS: ip=", client_ip, " uri=", request_uri)
+                waf_debug("WAF_POST_NOARGS: ip=", client_ip, " uri=", request_uri)
             end
         end
     end
 end
 
-ngx.log(ngx.ERR, "WAF_ALL_PASS: ip=", client_ip, " uri=", request_uri)
+waf_debug("WAF_ALL_PASS: ip=", client_ip, " uri=", request_uri)

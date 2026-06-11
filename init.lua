@@ -48,7 +48,7 @@ end
 -- 防御性处理：确保关键配置变量生效
 -- ============================================================
 if attacklog == nil then
-    ngx.log(ngx.ERR, "WAF_CONFIG_ERROR: attacklog is nil after require 'config'. ",
+    waf_debug("WAF_CONFIG_ERROR: attacklog is nil after require 'config'. ",
             "config.lua may not be loaded correctly or variable name mismatch. ",
             "_G.attacklog=", tostring(_G.attacklog or "nil"), " ",
             "logdir=", tostring(logdir or "nil"), " ",
@@ -86,6 +86,15 @@ BlockResponseCheck = optionIsOn(BlockResponse)
 -- 日志限流配置
 LogRateLimit = LogRateLimit or 0
 
+-- WAF 调试日志开关
+wafDebug = optionIsOn(WafDebug)
+
+function waf_debug(...)
+    if wafDebug then
+        ngx.log(ngx.ERR, ...)
+    end
+end
+
 -- ============================================================
 -- 日志限流表（worker 级别）
 -- ============================================================
@@ -119,7 +128,7 @@ end
 function write(logfile, msg)
     local fd, err = io.open(logfile, "ab")
     if fd == nil then
-        ngx.log(ngx.ERR, "WAF_WRITE_FAIL: file=", logfile, " err=", tostring(err), " ip=", getClientIp(), " uri=", ngx.var.request_uri)
+        waf_debug("WAF_WRITE_FAIL: file=", logfile, " err=", tostring(err), " ip=", getClientIp(), " uri=", ngx.var.request_uri)
         return false, err
     end
     fd:write(msg)
@@ -130,7 +139,7 @@ end
 
 function log(method, url, data, ruletag)
     if not attacklog then
-        ngx.log(ngx.ERR, "WAF_LOG_SKIP: attacklog=off ip=", getClientIp(), " uri=", ngx.var.request_uri, " rule=", ruletag)
+        waf_debug("WAF_LOG_SKIP: attacklog=off ip=", getClientIp(), " uri=", ngx.var.request_uri, " rule=", ruletag)
         return
     end
     
@@ -149,7 +158,7 @@ function log(method, url, data, ruletag)
         
         local current = log_limiter[window_key] or 0
         if current >= LogRateLimit then
-            ngx.log(ngx.ERR, "WAF_LOG_RATELIMIT: key=", window_key, " limit=", LogRateLimit)
+            waf_debug("WAF_LOG_RATELIMIT: key=", window_key, " limit=", LogRateLimit)
             return  -- 超过限流阈值，丢弃日志
         end
         log_limiter[window_key] = current + 1
@@ -174,9 +183,9 @@ function log(method, url, data, ruletag)
     
     local ok, err = write(filename, line)
     if ok then
-        ngx.log(ngx.ERR, "WAF_LOG_OK: file=", filename, " line=", string.gsub(line, "\n", ""))
+        waf_debug("WAF_LOG_OK: file=", filename, " line=", string.gsub(line, "\n", ""))
     else
-        ngx.log(ngx.ERR, "WAF_LOG_FAIL: file=", filename, " err=", tostring(err), " line=", string.gsub(line, "\n", ""))
+        waf_debug("WAF_LOG_FAIL: file=", filename, " err=", tostring(err), " line=", string.gsub(line, "\n", ""))
     end
 end
 
@@ -215,7 +224,7 @@ local function rule_count(rules)
     return tostring(c)
 end
 
-ngx.log(ngx.ERR, "WAF_RULES_LOADED: url=" .. rule_count(urlrules),
+waf_debug("WAF_RULES_LOADED: url=" .. rule_count(urlrules),
         " args=" .. rule_count(argsrules),
         " ua=" .. rule_count(uarules),
         " whiteurl=" .. rule_count(wturlrules),
@@ -536,7 +545,7 @@ function dangerous()
                     if m then
                         local hit = string.sub(m[0] or "-", 1, 200)
                         log('GET', ngx.var.request_uri, "-", "[DANGEROUS][" .. tag .. "][404] hit=[" .. hit .. "] rule=" .. rule)
-                        ngx.log(ngx.ERR, "WAF_DEBUG: should_block(DangerousAction)=", tostring(should_block("DangerousAction")))
+                        waf_debug("WAF_DEBUG: should_block(DangerousAction)=", tostring(should_block("DangerousAction")))
                         if should_block("DangerousAction") then
                             return say_html(ngx.HTTP_NOT_FOUND)
                         end

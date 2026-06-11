@@ -30,6 +30,7 @@
 | **日志限流** | 同 IP 同规则 60 秒内可限制记录条数，防日志打爆磁盘 |
 | **请求体大小限制** | 默认 10MB 上限，防超大 POST DoS |
 | **按模块告警模式** | 各检测模块可独立配置 `block`（拦截）或 `log`（仅记录不拦截） |
+| **调试日志开关** | 统一控制所有 `WAF_` 前缀跟踪日志，排查问题时开启，生产环境关闭 |
 | **命令行管理工具** | `waf-cli` 通过文件管道管理，无需开放 HTTP 接口 |
 
 ---
@@ -184,10 +185,21 @@ TrustedProxies = {
 
 ### 5. 重启 / 热更新
 
-- 修改 `config.lua` 或 Lua 代码：需 `nginx -s reload`
-- 修改 `wafconf/` 下的规则文件：**无需 reload，5 秒内自动生效**（基于规则缓存 TTL）
-- 如需立即生效：使用命令行工具 `./waf-cli reload`（无需开放 HTTP 接口）
-- 或访问管理接口 `/waf-admin?action=reload`（仅限内网）
+| 修改内容 | 生效方式 | 说明 |
+|---------|---------|------|
+| `wafconf/` 下的规则文件 | **无需任何操作** | 基于 `RuleCacheTTL`（默认 5 秒）自动刷新 |
+| `config.lua` | `nginx -s reload` | 大部分配置 reload 即可 |
+| `waf.lua` / `response.lua` | `nginx -s reload` | `access_by_lua` / `body_filter_by_lua` 阶段 reload 生效 |
+| `init.lua` / `lib/*.lua` | **`nginx -s stop && nginx`** | 若 `nginx.conf` 中使用了 `init_by_lua_file`，reload **不会**重新执行 `init.lua` |
+
+如需立即刷新规则缓存：
+```bash
+# 命令行工具（推荐，无需 HTTP 接口）
+./waf-cli reload
+
+# 或访问管理接口（仅限内网）
+curl "http://localhost/waf-admin?action=reload"
+```
 
 ---
 
@@ -216,6 +228,7 @@ TrustedProxies = {
 | `BlockMethod` | string | `on` | 禁止 TRACE/TRACK |
 | `BlockHeader` | string | `on` | Header 层攻击检测 |
 | `BlockResponse` | string | `on` | 响应敏感信息泄露检测 |
+| `WafDebug` | string | `off` | WAF 调试日志开关：`on` 时所有 `WAF_` 前缀的跟踪日志写入 nginx error log |
 
 ### 增强功能配置
 
@@ -492,6 +505,26 @@ IP [时间] "方法 域名URI" "数据" "UA" "命中标记"
 192.168.1.3 [2025-06-10T14:32:00+08:00] "POST example.com/upload" "-" "Mozilla/5.0..." "[FILEEXT][403] hit=[php] rule=php"
 ```
 
+### 调试日志（WafDebug）
+
+当 `WafDebug = "on"` 时，nginx error log 会输出以下跟踪信息：
+
+| 日志标识 | 说明 |
+|---------|------|
+| `WAF_ENTRY` | 请求进入 WAF，显示 IP、Method、URI、UA、attacklog 状态、logpath 路径 |
+| `WAF_PASS` | 某检测模块通过（如 `blockip`、`headers`、`denycc` 等） |
+| `WAF_BLOCK` | 某检测模块拦截命中 |
+| `WAF_WHITEIP` / `WAF_WHITEURL` | 请求被白名单放行 |
+| `WAF_ALL_PASS` | 所有检测通过，请求放行到后端 |
+| `WAF_RESPONSE` | 进入响应过滤阶段 |
+| `WAF_LOG_OK` / `WAF_LOG_FAIL` | sec.log 写入成功/失败，含完整文件路径和日志内容 |
+| `WAF_LOG_SKIP` | 日志被跳过（通常因为 `attacklog=off` 或限流） |
+| `WAF_RULES_LOADED` | 规则加载汇总，显示各模块规则条数 |
+
+**生产环境建议**：保持 `WafDebug = "off"`，避免 error log 被大量 WAF 跟踪日志撑满。
+
+---
+
 ### 命中标记说明
 
 | 标记 | 含义 | 状态码 | `hit` 示例 |
@@ -617,7 +650,63 @@ LogRateLimit = 10
 - 使用 `logrotate` 按天切割日志
 - 将日志接入 ELK / Loki 做集中存储和检索
 
-### Q6: 如何确认增强 CC 已生效？
+### Q5.1: error log 中有 WAF 日志，但 sec.log 文件没有记录？
+
+按以下顺序排查：
+
+1. **检查 `attacklog` 是否生效**
+   ```bash
+   tail -f /u/medsci/logs/nginx/error.log | grep WAF_ENTRY
+   ```
+   如果看到 `attacklog=nil`，说明 `config.lua` 中的 `attacklog = "on"` 没有生效。检查服务器上实际运行的 `config.lua` 内容：
+   ```bash
+   cat /path/to/ngx-lua-waf/config.lua | grep attacklog
+   ```
+
+2. **检查 sec.log 写入状态**
+   开启调试模式后，error log 会显示每次写入结果：
+   ```lua
+   WafDebug = "on"   -- 临时开启排查
+   ```
+   ```bash
+   nginx -s reload
+   tail -f error.log | grep 'WAF_LOG_OK\|WAF_LOG_FAIL\|WAF_LOG_SKIP'
+   ```
+   - `WAF_LOG_OK` → 写入成功，检查 `file=` 后的路径是否正确
+   - `WAF_LOG_FAIL` → 写入失败，根据 `err=` 修复权限/目录问题
+   - `WAF_LOG_SKIP: attacklog=off` → `attacklog` 未生效，见第 1 步
+
+3. **检查日志路径权限**
+   ```bash
+   ls -ld /u/medsci/logs/nginx/
+   touch /u/medsci/logs/nginx/test_write && rm /u/medsci/logs/nginx/test_write
+   ```
+
+4. **检查 nginx 配置中是否使用了 `init_by_lua_file`**
+   如果 `init.lua` 是在 `init_by_lua_file` 中加载的，修改 `init.lua` 后 **`nginx -s reload` 不会生效**，必须执行：
+   ```bash
+   nginx -s stop && nginx
+   ```
+
+### Q6: WAF 调试日志开关怎么使用？
+
+```lua
+-- config.lua
+WafDebug = "on"   -- 排查问题时临时开启
+WafDebug = "off"  -- 生产环境默认关闭
+```
+
+开启后，nginx error log 会输出完整的请求跟踪：
+```
+WAF_ENTRY: ip=1.2.3.4 method=GET uri=/swagger.json attacklog=true logpath=...
+WAF_PASS: module=blockip ip=1.2.3.4 uri=/swagger.json
+WAF_BLOCK: module=dangerous ip=1.2.3.4 uri=/swagger.json
+WAF_LOG_OK: file=..._sec.log line=...
+```
+
+**注意**：`init.lua` 在 `init_by_lua_file` 阶段执行时，`WafDebug` 的读取也在该阶段。如果修改后不生效，需要 `nginx restart`。
+
+### Q7: 如何确认增强 CC 已生效？
 
 开启后，被 CC 拦截的请求会返回以下响应头：
 
@@ -627,7 +716,7 @@ X-WAF-CC-Count: 201              # 当前计数
 X-WAF-CC-Limit: 200              # 阈值
 ```
 
-### Q7: 如何查看某个 IP 的 CC 统计？
+### Q8: 如何查看某个 IP 的 CC 统计？
 
 ```bash
 # 方式一：命令行工具（推荐）
@@ -639,7 +728,7 @@ curl "http://localhost/waf-admin?action=stats&ip=1.2.3.4"
 
 ---
 
-### Q8: 如何解除被封禁的 IP？
+### Q9: 如何解除被封禁的 IP？
 
 CC 封禁（由 `waf_ban` 共享字典管理）到期会自动释放。如需手动提前解封：
 
@@ -655,7 +744,7 @@ CC 封禁（由 `waf_ban` 共享字典管理）到期会自动释放。如需手
 
 ---
 
-### Q9: 如何只告警不拦截？
+### Q10: 如何只告警不拦截？
 
 **全局切换为仅告警模式**（所有模块只记录日志，不阻止请求）：
 
@@ -674,7 +763,7 @@ DangerousAction = "log"       -- 敏感路径只记录
 
 ---
 
-### Q10: CC 惩罚时间如何设置？
+### Q11: CC 惩罚时间如何设置？
 
 编辑 `config.lua`：
 

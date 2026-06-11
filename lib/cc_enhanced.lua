@@ -267,7 +267,7 @@ function _M.check()
         if log then
             log('GET', ngx.var.request_uri, "-", "[CC-ENHANCED][503] hit=[banned] level=" .. tostring(ban_level) .. " ttl=" .. tostring(ban_ttl) .. " ip=" .. ip)
         else
-            ngx.log(ngx.ERR, "WAF_CC_BAN_HIT: ip=", ip, " level=", ban_level, " ttl=", ban_ttl)
+            waf_debug("WAF_CC_BAN_HIT: ip=", ip, " level=", ban_level, " ttl=", ban_ttl)
         end
         if cc_should_block() then
             ngx.header["X-WAF-CC-Status"] = "banned"
@@ -289,7 +289,7 @@ function _M.check()
         if log then
             log('GET', ngx.var.request_uri, "-", "[CC-ENHANCED][503] hit=[global-limit] count=" .. tostring(global_count) .. " limit=" .. tostring(global_limit) .. " ip=" .. ip)
         else
-            ngx.log(ngx.ERR, "WAF_CC_GLOBAL_HIT: ip=", ip, " count=", global_count, " limit=", global_limit)
+            waf_debug("WAF_CC_GLOBAL_HIT: ip=", ip, " count=", global_count, " limit=", global_limit)
         end
         -- 全站超限是最严重的，直接惩罚
         ngx.header["X-WAF-CC-Status"] = "global-limit"
@@ -356,7 +356,7 @@ function _M.check()
         if log then
             log('GET', ngx.var.request_uri, "-", "[CC-ENHANCED][503] hit=[" .. req_type .. "-limit] count=" .. tostring(type_count) .. " limit=" .. tostring(type_limit) .. " key=" .. type_key)
         else
-            ngx.log(ngx.ERR, "WAF_CC_TYPE_HIT: ip=", ip, " type=", req_type, " count=", type_count, " limit=", type_limit)
+            waf_debug("WAF_CC_TYPE_HIT: ip=", ip, " type=", req_type, " count=", type_count, " limit=", type_limit)
         end
         ngx.header["X-WAF-CC-Status"] = req_type .. "-limit"
         ngx.header["X-WAF-CC-Count"] = tostring(type_count)

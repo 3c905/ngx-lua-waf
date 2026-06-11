@@ -2,6 +2,9 @@ RulePath = "/u/nginx/ngx_lua_waf/wafconf/"
 attacklog = "on"
 logdir = "/u/medsci/logs/nginx/"
 
+-- WAF 调试日志开关：on 时所有 WAF_ 前缀的调试日志会写入 nginx error log
+WafDebug = "off"
+
 -- ============================================================
 -- 一键场景配置指南（修改下方 5 个开关即可）
 -- ============================================================
