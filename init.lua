@@ -45,6 +45,19 @@ if optionIsOn(CCEnhanced) then
 end
 
 -- ============================================================
+-- 防御性处理：确保关键配置变量生效
+-- ============================================================
+if attacklog == nil then
+    ngx.log(ngx.ERR, "WAF_CONFIG_ERROR: attacklog is nil after require 'config'. ",
+            "config.lua may not be loaded correctly or variable name mismatch. ",
+            "_G.attacklog=", tostring(_G.attacklog or "nil"), " ",
+            "logdir=", tostring(logdir or "nil"), " ",
+            "rulepath=", tostring(RulePath or "nil"))
+    -- 强制兜底，确保日志功能可用
+    attacklog = "on"
+end
+
+-- ============================================================
 -- 全局配置变量（保持向后兼容）
 -- ============================================================
 logpath = logdir and string.gsub(logdir, "\r$", "") or "/tmp"
