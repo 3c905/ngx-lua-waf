@@ -47,8 +47,8 @@ end
 -- ============================================================
 -- 全局配置变量（保持向后兼容）
 -- ============================================================
-logpath = logdir 
-rulepath = RulePath
+logpath = logdir and string.gsub(logdir, "\r$", "") or "/tmp"
+rulepath = RulePath and string.gsub(RulePath, "\r$", "") or "/tmp/"
 UrlDeny = optionIsOn(UrlDeny)
 PostCheck = optionIsOn(postMatch)
 CookieCheck = optionIsOn(cookieMatch)
@@ -478,7 +478,7 @@ function dangerous()
                 if not BlockAggressiveCheck and tag == "aggressive" then
                     -- 激进规则已关闭，跳过
                 elseif rule ~= "" then
-                    local m = cache.match_cached(ngx.var.request_uri, rule, "isjo")
+                    local m = ngx.re.match(ngx.var.request_uri, rule, "isjo")
                     if m then
                         local hit = string.sub(m[0] or "-", 1, 200)
                         log('GET', ngx.var.request_uri, "-", "[DANGEROUS][" .. tag .. "][404] hit=[" .. hit .. "] rule=" .. rule)
