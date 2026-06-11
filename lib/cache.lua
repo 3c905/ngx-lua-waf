@@ -45,6 +45,8 @@ function _M.read_rule_cached(rulepath, var, force_reload)
     
     local t = {}
     for line in file:lines() do
+        -- 兼容 Windows 换行符 \r\n
+        line = string.gsub(line, "\r$", "")
         if line ~= "" and string.sub(line, 1, 1) ~= "#" then
             table.insert(t, line)
         end
@@ -77,6 +79,8 @@ function _M.read_tagged_rule_cached(rulepath, var, force_reload)
     local t = {}
     local current_tag = "common"
     for line in file:lines() do
+        -- 兼容 Windows 换行符 \r\n
+        line = string.gsub(line, "\r$", "")
         if line ~= "" then
             local tag = string.match(line, "^# %[(%w+)%]")
             if tag then
