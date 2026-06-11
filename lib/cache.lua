@@ -78,7 +78,7 @@ function _M.read_tagged_rule_cached(rulepath, var, force_reload)
     local current_tag = "common"
     for line in file:lines() do
         if line ~= "" then
-            local tag = string.match(line, "^# %[(%%w+)%]")
+            local tag = string.match(line, "^# %[(%w+)%]")
             if tag then
                 current_tag = tag
             elseif string.sub(line, 1, 1) ~= "#" then
