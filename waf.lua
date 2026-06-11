@@ -1,4 +1,6 @@
 require 'init'
+local cache = require "cache"
+local utils = require "utils"
 
 local content_length = tonumber(ngx.req.get_headers()['content-length'])
 local method = ngx.req.get_method()
@@ -11,30 +13,45 @@ if content_length and content_length > MAX_BODY_SIZE then
         if should_block and should_block("BodyLimitAction") then
             ngx.status = 413
             ngx.say("Request Entity Too Large")
-            ngx.exit(413)
+            return ngx.exit(413)
         end
     end
 end
 
 if whiteip() then
-    -- pass
+    return
 elseif blockip() then
-    -- blocked
+    return
 elseif methodcheck() then
+    return
 elseif traversal() then
+    return
 elseif whiteurl() then
+    return
 elseif headers() then
+    return
 elseif denycc() then
+    return
 elseif ngx.var.http_Acunetix_Aspect then
-    if should_block("ScannerAction") then ngx.exit(444) end
+    log('GET', ngx.var.request_uri, "-", "[SCANNER][444] hit=[Acunetix-Aspect]")
+    if should_block("ScannerAction") then return ngx.exit(444) end
+    return
 elseif ngx.var.http_X_Scan_Memo then
-    if should_block("ScannerAction") then ngx.exit(444) end
+    log('GET', ngx.var.request_uri, "-", "[SCANNER][444] hit=[X-Scan-Memo]")
+    if should_block("ScannerAction") then return ngx.exit(444) end
+    return
 elseif referer() then
+    return
 elseif ua() then
+    return
 elseif dangerous() then
+    return
 elseif url() then
+    return
 elseif args() then
+    return
 elseif cookie() then
+    return
 elseif PostCheck then
     if method == "POST" then
         local boundary = get_boundary()
@@ -85,7 +102,7 @@ elseif PostCheck then
                                 if m then
                                     log('POST', ngx.var.request_uri, "-", "[POST][403] hit=[" .. string.sub(m[0] or "-", 1, 200) .. "] rule=" .. rule)
                                     if should_block("PostAction") then
-                                        say_html()
+                                        return say_html()
                                     end
                                     return
                                 end

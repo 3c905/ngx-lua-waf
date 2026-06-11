@@ -8,7 +8,7 @@
 ^/actuator/(env|beans|heapdump|threaddump|metrics|prometheus|mappings|configprops|loggers|conditions|caches|scheduledtasks)$
 
 # Swagger / OpenAPI
-^/swagger\.json$
+swagger\.json
 ^/swagger-ui(/.*)?$
 ^/swagger-resources(/.*)?$
 ^/v2/api-docs(/.*)?$
