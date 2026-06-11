@@ -2,6 +2,13 @@ require 'init'
 local cache = require "cache"
 local utils = require "utils"
 
+-- 防御性兜底：init_by_lua 阶段可能未正确加载 attacklog
+if attacklog == nil or attacklog == false then
+    attacklog = true
+    ngx.log(ngx.ERR, "WAF_FALLBACK: attacklog was nil/false in access phase, forced to true. ",
+            "init.lua may need nginx restart to take effect.")
+end
+
 local content_length = tonumber(ngx.req.get_headers()['content-length'])
 local method = ngx.req.get_method()
 local ngxmatch = ngx.re.match
