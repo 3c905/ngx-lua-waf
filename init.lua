@@ -195,12 +195,12 @@ end
 -- ============================================================
 
 function say_html(status)
+    ngx.header.content_type = "text/html"
+    ngx.status = status or ngx.HTTP_FORBIDDEN
     if Redirect then
-        ngx.header.content_type = "text/html"
-        ngx.status = status or ngx.HTTP_FORBIDDEN
         ngx.say(html)
-        ngx.exit(ngx.status)
     end
+    return ngx.exit(ngx.status)
 end
 
 -- ============================================================
