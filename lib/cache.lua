@@ -51,7 +51,7 @@ function _M.match_cached(text, pattern, options)
     if not text or text == "" or not pattern or pattern == "" then
         return nil
     end
-    return ngx.re.match(text, pattern, options or "isjo")
+    return ngx.re.match(text, pattern, options or "isj")
 end
 
 function _M.reload_all()

@@ -211,7 +211,7 @@ function whiteurl()
     if WhiteCheck then
         if wturlrules ~= nil then
             for _, rule in pairs(wturlrules) do
-                if cache.match_cached(ngx.var.uri, rule, "isjo") then
+                if cache.match_cached(ngx.var.uri, rule, "isj") then
                     return true 
                 end
             end
@@ -229,7 +229,7 @@ function fileExtCheck(ext)
     ext = string.lower(ext)
     if ext then
         for rule in pairs(items) do
-            if cache.match_cached(ext, rule, "isjo") then
+            if cache.match_cached(ext, rule, "isj") then
                 log('POST', ngx.var.request_uri, "-", "[FILEEXT][403] hit=[" .. ext .. "] rule=" .. rule)
                 if should_block("FileExtAction") then
                     say_html()
@@ -270,10 +270,10 @@ function args()
             if data and type(data) ~= "boolean" and rule ~= "" then
                 -- 使用解码链防御编码绕过
                 local decoded = utils.decode_chain(unescape(data), 3)
-                local m = cache.match_cached(decoded, rule, "isjo")
+                local m = cache.match_cached(decoded, rule, "isj")
                 if not m then
                     -- 再检查原始值
-                    m = cache.match_cached(unescape(data), rule, "isjo")
+                    m = cache.match_cached(unescape(data), rule, "isj")
                 end
                 if m then
                     log('GET', ngx.var.request_uri, "-", "[ARGS][403] hit=[" .. string.sub(m[0] or "-", 1, 200) .. "] rule=" .. rule)
@@ -296,7 +296,7 @@ function url()
     if UrlDeny then
         for _, rule in pairs(urlrules or {}) do
             if rule ~= "" then
-                local m = cache.match_cached(ngx.var.request_uri, rule, "isjo")
+                local m = cache.match_cached(ngx.var.request_uri, rule, "isj")
                 if m then
                     log('GET', ngx.var.request_uri, "-", "[URL][403] hit=[" .. string.sub(m[0] or "-", 1, 200) .. "] rule=" .. rule)
                     if should_block("URLAction") then
@@ -319,7 +319,7 @@ function ua()
     if ua ~= nil then
         for _, rule in pairs(uarules or {}) do
             if rule ~= "" then
-                local m = cache.match_cached(ua, rule, "isjo")
+                local m = cache.match_cached(ua, rule, "isj")
                 if m then
                     log('UA', ngx.var.request_uri, "-", "[UA][403] hit=[" .. string.sub(m[0] or "-", 1, 200) .. "] rule=" .. rule)
                     if should_block("UAAction") then
@@ -341,9 +341,9 @@ function body(data)
     for _, rule in pairs(postrules or {}) do
         if rule ~= "" and data ~= "" then
             local decoded = utils.decode_chain(unescape(data), 3)
-            local m = cache.match_cached(decoded, rule, "isjo")
+            local m = cache.match_cached(decoded, rule, "isj")
             if not m then
-                m = cache.match_cached(unescape(data), rule, "isjo")
+                m = cache.match_cached(unescape(data), rule, "isj")
             end
             if m then
                 log('POST', ngx.var.request_uri, data, "[POST][403] hit=[" .. string.sub(m[0] or "-", 1, 200) .. "] rule=" .. rule)
@@ -366,7 +366,7 @@ function cookie()
     if CookieCheck and ck then
         for _, rule in pairs(ckrules or {}) do
             if rule ~= "" then
-                local m = cache.match_cached(ck, rule, "isjo")
+                local m = cache.match_cached(ck, rule, "isj")
                 if m then
                     log('Cookie', ngx.var.request_uri, "-", "[COOKIE][403] hit=[" .. string.sub(m[0] or "-", 1, 200) .. "] rule=" .. rule)
                     if should_block("CookieAction") then
@@ -478,7 +478,7 @@ function dangerous()
                 if not BlockAggressiveCheck and tag == "aggressive" then
                     -- 激进规则已关闭，跳过
                 elseif rule ~= "" then
-                    local m = ngx.re.match(ngx.var.request_uri, rule, "isjo")
+                    local m = ngx.re.match(ngx.var.request_uri, rule, "isj")
                     if m then
                         local hit = string.sub(m[0] or "-", 1, 200)
                         log('GET', ngx.var.request_uri, "-", "[DANGEROUS][" .. tag .. "][404] hit=[" .. hit .. "] rule=" .. rule)
@@ -504,7 +504,7 @@ function referer()
         if referer ~= nil and refererrules ~= nil then
             for _, rule in pairs(refererrules) do
                 if rule ~= "" then
-                    local m = cache.match_cached(referer, rule, "isjo")
+                    local m = cache.match_cached(referer, rule, "isj")
                     if m then
                         local hit = string.sub(m[0] or "-", 1, 200)
                         log('GET', ngx.var.request_uri, "-", "[REFERER][403] hit=[" .. hit .. "] rule=" .. rule)
@@ -530,7 +530,7 @@ function methodcheck()
         if methodrules ~= nil then
             for _, rule in pairs(methodrules) do
                 if rule ~= "" then
-                    local m = cache.match_cached(method, rule, "isjo")
+                    local m = cache.match_cached(method, rule, "isj")
                     if m then
                         local hit = string.sub(m[0] or "-", 1, 200)
                         log('GET', ngx.var.request_uri, "-", "[METHOD][403] hit=[" .. hit .. "] rule=" .. rule)
@@ -553,7 +553,7 @@ end
 function traversal()
     local request_uri = ngx.var.request_uri
     if request_uri ~= nil then
-        local m = cache.match_cached(request_uri, [[(\.\./|%2e%2e|%252e|\%00)]], "isjo")
+        local m = cache.match_cached(request_uri, [[(\.\./|%2e%2e|%252e|\%00)]], "isj")
         if m then
             local hit = string.sub(m[0] or "-", 1, 200)
             log('GET', request_uri, "-", "[TRAVERSAL][400] hit=[" .. hit .. "] path_traversal")
@@ -580,7 +580,7 @@ function headers()
             for _, rule in pairs(headerrules or {}) do
                 if rule ~= "" then
                     local target = tostring(hname) .. ": " .. tostring(hval)
-                    local m = cache.match_cached(target, rule, "isjo")
+                    local m = cache.match_cached(target, rule, "isj")
                     if m then
                         local hit = string.sub(m[0] or "-", 1, 200)
                         log('GET', ngx.var.request_uri, "-", "[HEADER][403] hit=[" .. hit .. "] header=" .. hname .. " rule=" .. rule)
@@ -606,7 +606,7 @@ function response_filter()
         if chunk and chunk ~= "" then
             for _, rule in pairs(responserules or {}) do
                 if rule ~= "" then
-                    local m = cache.match_cached(chunk, rule, "isjo")
+                    local m = cache.match_cached(chunk, rule, "isj")
                     if m then
                         local hit = string.sub(m[0] or "-", 1, 200)
                         log('GET', ngx.var.request_uri, "-", "[RESPONSE][500] hit=[" .. hit .. "] rule=" .. rule)
