@@ -47,7 +47,6 @@ postgres://
 # 密钥 / Token 泄露
 -----BEGIN\s+(RSA\s+PRIVATE\s+KEY|PRIVATE\s+KEY|OPENSSH\s+PRIVATE\s+KEY)
 -----BEGIN\s+CERTIFICATE-----
-(A3T[A-Z0-9]|AKIA|AGPA|AROA|AIPA|ANPA|ANVA|ASIA)[A-Z0-9]{16}
 sk-[a-zA-Z0-9]{48}
 ghp_[a-zA-Z0-9]{36}
 github_pat_[a-zA-Z0-9]{22}_[a-zA-Z0-9]{59}
