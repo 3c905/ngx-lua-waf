@@ -48,7 +48,7 @@ end
 -- 防御性处理：确保关键配置变量生效
 -- ============================================================
 if attacklog == nil then
-    waf_debug("WAF_CONFIG_ERROR: attacklog is nil after require 'config'. ",
+    ngx.log(ngx.ERR, "WAF_CONFIG_ERROR: attacklog is nil after require 'config'. ",
             "config.lua may not be loaded correctly or variable name mismatch. ",
             "_G.attacklog=", tostring(_G.attacklog or "nil"), " ",
             "logdir=", tostring(logdir or "nil"), " ",
@@ -70,7 +70,7 @@ if rulepath ~= "/" and string.sub(rulepath, -1) ~= "/" then
 end
 UrlDeny = optionIsOn(UrlDeny)
 PostCheck = optionIsOn(postMatch)
-CookieCheck = optionIsOn(cookieMatch)
+CookieCheck = optionIsOn(CookieMatch)
 WhiteCheck = optionIsOn(whiteModule)
 PathInfoFix = optionIsOn(PathInfoFix)
 attacklog = optionIsOn(attacklog)
@@ -314,8 +314,8 @@ end
 -- ============================================================
 
 function args()
+    local args = ngx.req.get_uri_args()
     for _, rule in pairs(argsrules or {}) do
-        local args = ngx.req.get_uri_args()
         for key, val in pairs(args) do
             if type(val) == 'table' then
                 local t = {}
@@ -454,11 +454,19 @@ function denycc()
     
     -- 回退到原版 CC 逻辑
     if CCDeny then
-        local uri = ngx.var.uri
-        local CCcount = tonumber(string.match(CCrate, '(.*)/'))
-        local CCseconds = tonumber(string.match(CCrate, '/(.*)'))
+        local uri = ngx.var.uri or "/"
+        local CCcount = tonumber(string.match(CCrate or "", '(.*)/'))
+        local CCseconds = tonumber(string.match(CCrate or "", '/(.*)'))
+        if not CCcount or not CCseconds then
+            waf_debug("WAF_CC_CONFIG_ERROR: invalid CCrate=", tostring(CCrate))
+            return false
+        end
         local token = getClientIp() .. uri
         local limit = ngx.shared.limit
+        if not limit then
+            waf_debug("WAF_CC_LIMIT_DICT_MISSING: shared dict 'limit' not configured")
+            return false
+        end
         local req, _ = limit:get(token)
         if req then
             if req > CCcount then

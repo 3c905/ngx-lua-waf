@@ -100,6 +100,10 @@ elseif PostCheck then
             ngx.req.init_body(128 * 1024)
             sock:settimeout(0)
             local content_length = tonumber(ngx.req.get_headers()['content-length'])
+            if not content_length then
+                waf_debug("WAF_POST_MULTIPART_NO_LENGTH: ip=", client_ip, " uri=", request_uri)
+                return
+            end
             local chunk_size = 4096
             if content_length < chunk_size then
                 chunk_size = content_length
@@ -120,6 +124,7 @@ elseif PostCheck then
             local args = ngx.req.get_post_args()
             if args then
                 for key, val in pairs(args) do
+                    local data
                     if type(val) == 'table' then
                         local t = {}
                         for k, v in pairs(val) do
@@ -129,10 +134,12 @@ elseif PostCheck then
                             table.insert(t, v)
                         end
                         data = table.concat(t, " ")
+                    elseif val == true then
+                        data = ""
                     else
                         data = val
                     end
-                    if data and data ~= "" then
+                    if data and data ~= "" and type(data) ~= "boolean" then
                         local decoded = utils.decode_chain(unescape(data), 3)
                         for _, rule in pairs(postrules or {}) do
                             if rule ~= "" then
