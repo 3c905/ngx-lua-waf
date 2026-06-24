@@ -41,6 +41,7 @@ swagger\.json
 /autodiscover/autodiscover\.json
 /@zdi/
 /Powershell
+/developmentserver/metadatauploader
 /actuator/gateway/routes
 /actuator/gateway/refresh
 /api/v1/gateway/routes
@@ -133,6 +134,13 @@ bash\.exe
 ^/__webpack_dev_server__(/.*)?$
 ^/npm-debug(/.*)?$
 ^/yarn-error(/.*)?$
+^/next\.config\.(js|mjs|ts)$
+
+# LLM / OpenAI API 接口探测
+^/v1/models$
+^/v1/embeddings$
+^/v1/completions$
+^/v1/chat/completions$
 
 # [php]
 ^/_ignition(/.*)?$
