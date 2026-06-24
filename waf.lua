@@ -12,6 +12,7 @@ end
 local content_length = tonumber(ngx.req.get_headers()['content-length'])
 local method = ngx.req.get_method()
 local ngxmatch = ngx.re.match
+local unescape = ngx.unescape_uri
 local client_ip = getClientIp and getClientIp() or (ngx.var.remote_addr or "unknown")
 local request_uri = ngx.var.request_uri or "/"
 local user_agent = ngx.var.http_user_agent or "-"
