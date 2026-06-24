@@ -91,6 +91,27 @@ swagger\.json
 /(package\.json|package-lock\.json|yarn\.lock|pnpm-lock\.yaml)$
 ^/(node_modules)(/.*)?$
 
+# 系统 shell 执行（路径穿越/命令注入常用目标）
+/bin/(ba)?sh
+/bin/dash
+/bin/zsh
+/bin/csh
+/bin/ksh
+
+# 常见路径穿越敏感目标（LFI / RCE 探测）
+/etc/passwd
+/etc/shadow
+/etc/hosts
+/proc/self/
+/win\.ini
+/windows/system32/
+cmd\.exe
+powershell\.exe
+bash\.exe
+
+# 常见 WebShell / 命令执行文件名
+(webshell|c99|r57|china|fx29|shell|cmd|exec|eval|upload|manager)\.((php|jsp|asp|aspx|cgi|pl|sh|py)(\d?))
+
 # [java]
 ^/druid(/.*)?$
 ^/h2-console(/.*)?$
@@ -100,11 +121,15 @@ swagger\.json
 ^/monitoring$
 ^/javamelody(/.*)?$
 
+# 环境变量 / 凭证文件（任意路径）
+\.env(\.[a-zA-Z0-9_-]+)?$
+\.git-credentials
+\.gitconfig
+
 # [nodejs]
 ^/__webpack_dev_server__(/.*)?$
 ^/npm-debug(/.*)?$
 ^/yarn-error(/.*)?$
-^/\.env(\..+)?$
 
 # [php]
 ^/_ignition(/.*)?$

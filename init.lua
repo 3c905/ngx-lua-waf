@@ -625,7 +625,7 @@ end
 function traversal()
     local request_uri = ngx.var.request_uri
     if request_uri ~= nil then
-        local m = cache.match_cached(request_uri, [[(\.\./|%2e%2e|%252e|\%00)]], "isj")
+        local m = cache.match_cached(request_uri, [[(\.\./|\.(%2e)|(%2e)\.|%2e%2e|%252e|\%00)]], "isj")
         if m then
             local hit = string.sub(m[0] or "-", 1, 200)
             log('GET', request_uri, "-", "[TRAVERSAL][400] hit=[" .. hit .. "] path_traversal")
