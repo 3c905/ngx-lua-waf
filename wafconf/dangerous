@@ -38,6 +38,9 @@ swagger\.json
 ^/upload/.*\.(php\d*|jsp|jspx|asp|aspx|cgi|py|sh|pl|rb)$
 
 # ========== 已知高危漏洞路径 ==========
+/autodiscover/autodiscover\.json
+/@zdi/
+/Powershell
 /actuator/gateway/routes
 /actuator/gateway/refresh
 /api/v1/gateway/routes
