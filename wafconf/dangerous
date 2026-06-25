@@ -90,6 +90,9 @@ swagger\.json
 # 敏感文件模式 — core dump
 (core|core\.[0-9]+)$
 
+# 敏感文件模式 — direnv / shell 环境配置（LeakIX 等扫描器常探测 .envrc.local）
+\.envrc(\.[a-zA-Z0-9_-]+)*$
+
 # 依赖目录
 /(composer\.(json|lock)|vendor/)
 /(package\.json|package-lock\.json|yarn\.lock|pnpm-lock\.yaml)$
