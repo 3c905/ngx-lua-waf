@@ -154,7 +154,10 @@ ScannerAction = "block"      -- 扫描器特征头（Acunetix/X-Scan）
 -- ============================================================
 -- waf-cli 命令行工具通过文件管道与 WAF 通信
 -- 无需开放 HTTP 管理接口，适合生产环境安全管控
-WafCmdDir = "/tmp/waf-cmd"
+-- 默认自动使用 WAF 安装目录下的 waf-cmd 子目录
+-- 如需自定义（例如避免 tmpfs 或权限问题），改成绝对路径即可
+local waf_dir = string.match(debug.getinfo(1, "S").source:sub(2), "(.*)/")
+WafCmdDir = waf_dir .. "/waf-cmd"
 
 -- ============================================================
 -- 拦截页面 HTML

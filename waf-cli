@@ -4,10 +4,36 @@
 # 通过文件管道与运行中的 WAF 通信，无需开放 HTTP 接口
 # ============================================================
 
-CMD_DIR="/tmp/waf-cmd"
+# 默认使用 waf-cli 所在目录下的 waf-cmd 子目录
+# 如需自定义，直接修改下面这行，例如 CMD_DIR="/var/run/waf-cmd"
+WAF_DIR=$(cd "$(dirname "$0")" && pwd)
+CMD_DIR="$WAF_DIR/waf-cmd"
+
 TIMEOUT=5   # 等待响应超时时间（秒）
 
+# 触发 WAF 执行命令的 URL（多虚拟主机时请改成任意一个经过 WAF 的地址）
+WAF_TRIGGER_URL="${WAF_TRIGGER_URL:-http://127.0.0.1/}"
+
+# 输出颜色（仅终端输出时启用，管道输出时自动禁用）
+if [ -t 1 ]; then
+    COLOR_GREEN='\033[32m'
+    COLOR_RED='\033[31m'
+    COLOR_YELLOW='\033[33m'
+    COLOR_RESET='\033[0m'
+else
+    COLOR_GREEN=''
+    COLOR_RED=''
+    COLOR_YELLOW=''
+    COLOR_RESET=''
+fi
+
+# 自动创建命令管道目录，并尝试按 Nginx worker 用户授权
 mkdir -p "$CMD_DIR"
+NGINX_USER=$(ps aux 2>/dev/null | grep "nginx: worker" | grep -v grep | awk '{print $1}' | head -1)
+if [ -n "$NGINX_USER" ] && [ "$NGINX_USER" != "root" ]; then
+    chown "$NGINX_USER:$NGINX_USER" "$CMD_DIR" 2>/dev/null || true
+fi
+chmod 755 "$CMD_DIR"
 
 CMD="$1"
 IP="$2"
@@ -27,6 +53,10 @@ usage() {
     echo "Examples:"
     echo "  $(basename "$0") unban 1.2.3.4"
     echo "  $(basename "$0") banlist | jq '.data[] | {ip, remain}'"
+    echo ""
+    echo "Environment:"
+    echo "  WAF_TRIGGER_URL    触发 WAF 执行的 URL，默认 http://127.0.0.1/"
+    echo "                     多虚拟主机时请改成任意经过 WAF 的地址"
     exit 1
 }
 
@@ -56,12 +86,25 @@ case "$CMD" in
         ;;
 esac
 
+# 发送一个触发请求，让 WAF access 阶段执行命令处理
+# 多虚拟主机时，请设置 WAF_TRIGGER_URL 环境变量指向任意经过 WAF 的地址
+if [ -n "$WAF_TRIGGER_URL" ]; then
+    (sleep 0.2; curl -s -o /dev/null "$WAF_TRIGGER_URL" 2>/dev/null || true) &
+fi
+
 # 等待响应
 WAIT_MS=$((TIMEOUT * 10))
 for i in $(seq 1 $WAIT_MS); do
     if [ -f "$RES_FILE" ]; then
-        cat "$RES_FILE"
+        RES=$(cat "$RES_FILE")
         rm -f "$RES_FILE"
+        if echo "$RES" | grep -q '"status":"ok"'; then
+            printf '%b%s%b\n' "$COLOR_GREEN" "$RES" "$COLOR_RESET"
+        elif echo "$RES" | grep -q '"status":"error"'; then
+            printf '%b%s%b\n' "$COLOR_RED" "$RES" "$COLOR_RESET"
+        else
+            printf '%s\n' "$RES"
+        fi
         exit 0
     fi
     sleep 0.1
@@ -69,5 +112,5 @@ done
 
 # 超时：清理请求文件并返回错误
 rm -f "$REQ_FILE"
-echo '{"status":"error","message":"timeout waiting for WAF response. ensure nginx is running with WAF loaded, and requests are being processed."}'
+printf '%b%s%b\n' "$COLOR_RED" '{"status":"error","message":"timeout waiting for WAF response. ensure nginx is running with WAF loaded, and requests are being processed."}' "$COLOR_RESET"
 exit 1

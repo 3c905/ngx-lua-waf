@@ -22,27 +22,38 @@ if TrustedProxies then
 end
 
 -- 加载增强 CC 模块（如果启用）
-local cc_enhanced
-if optionIsOn(CCEnhanced) then
-    cc_enhanced = require "cc_enhanced"
-    cc_enhanced.config.enabled = true
-    cc_enhanced.config.global_rate = CCGlobalRate or "2000/60"
-    cc_enhanced.config.static_enabled = optionIsOn(CCStaticEnabled)
-    cc_enhanced.config.static_rate = CCStaticRate or "600/60"
-    cc_enhanced.config.static_no_referer_rate = CCStaticNoRefererRate or "200/60"
-    cc_enhanced.config.static_no_cookie_rate = CCStaticNoCookieRate or "300/60"
-    cc_enhanced.config.dynamic_rate = CCDynamicRate or "120/60"
-    cc_enhanced.config.api_rate = CCApiRate or "300/60"
-    cc_enhanced.config.upload_rate = CCUploadRate or "30/60"
-    cc_enhanced.config.post_multiplier = CCPostMultiplier or 0.5
-    cc_enhanced.config.progressive = optionIsOn(CCProgressive)
-    cc_enhanced.config.ban_duration_1 = CCBanDuration1 or 60
-    cc_enhanced.config.ban_duration_2 = CCBanDuration2 or 300
-    cc_enhanced.config.ban_duration_3 = CCBanDuration3 or 3600
-    cc_enhanced.config.challenge_enabled = optionIsOn(CCChallengeEnabled)
-    cc_enhanced.config.challenge_cookie = CCChallengeCookie or "_waf_cc"
-    cc_enhanced.config.challenge_ttl = CCChallengeTTL or 300
+-- 使用全局函数 + 惰性加载，避免 worker fork 后丢失局部变量
+local _cc_enhanced = nil
+
+function _G.get_cc_enhanced()
+    if _cc_enhanced and _cc_enhanced.config.enabled then
+        return _cc_enhanced
+    end
+    if optionIsOn(CCEnhanced) then
+        _cc_enhanced = require "cc_enhanced"
+        _cc_enhanced.config.enabled = true
+        _cc_enhanced.config.global_rate = CCGlobalRate or "2000/60"
+        _cc_enhanced.config.static_enabled = optionIsOn(CCStaticEnabled)
+        _cc_enhanced.config.static_rate = CCStaticRate or "600/60"
+        _cc_enhanced.config.static_no_referer_rate = CCStaticNoRefererRate or "200/60"
+        _cc_enhanced.config.static_no_cookie_rate = CCStaticNoCookieRate or "300/60"
+        _cc_enhanced.config.dynamic_rate = CCDynamicRate or "120/60"
+        _cc_enhanced.config.api_rate = CCApiRate or "300/60"
+        _cc_enhanced.config.upload_rate = CCUploadRate or "30/60"
+        _cc_enhanced.config.post_multiplier = CCPostMultiplier or 0.5
+        _cc_enhanced.config.progressive = optionIsOn(CCProgressive)
+        _cc_enhanced.config.ban_duration_1 = CCBanDuration1 or 60
+        _cc_enhanced.config.ban_duration_2 = CCBanDuration2 or 300
+        _cc_enhanced.config.ban_duration_3 = CCBanDuration3 or 3600
+        _cc_enhanced.config.challenge_enabled = optionIsOn(CCChallengeEnabled)
+        _cc_enhanced.config.challenge_cookie = CCChallengeCookie or "_waf_cc"
+        _cc_enhanced.config.challenge_ttl = CCChallengeTTL or 300
+    end
+    return _cc_enhanced
 end
+
+-- 初始加载（master 阶段）
+get_cc_enhanced()
 
 -- ============================================================
 -- 防御性处理：确保关键配置变量生效
@@ -448,8 +459,9 @@ end
 
 function denycc()
     -- 优先使用增强版 CC
-    if cc_enhanced and cc_enhanced.config.enabled then
-        return cc_enhanced.check()
+    local cc_enhanced_inst = get_cc_enhanced()
+    if cc_enhanced_inst then
+        return cc_enhanced_inst.check()
     end
     
     -- 回退到原版 CC 逻辑
