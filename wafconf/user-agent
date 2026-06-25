@@ -19,5 +19,8 @@
 # l9explore/l9tcpid = LeakIX 扫描器；Palo Alto / Cortex Xpanse = 帕洛阿尔托资产测绘
 (l9explore|l9tcpid|LeakIX|ModatScanner|GenomeCrawlerd|CyberConvoyScout|InternetMeasurement|Palo\s*Alto|Cortex\s*Xpanse|visionheight\.com|Scanner/|NTRIP|WebCopier)
 
+# 5.1 HTTP Banner / 指纹识别类扫描器
+(HTTP\s+Banner\s+Detection|ipip\.net|Banner\s+Detection)
+
 # 6. 开发工具 / 命令行客户端 / 测试库
 (curl|wget|ApacheBench|httpie|PostmanRuntime|Insomnia|node-fetch|Go-http-client|Java)

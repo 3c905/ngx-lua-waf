@@ -1,0 +1,160 @@
+[WARN] 无法解析: 45.148.10.200 - - [25/Jun/2026:09:30:05 +0800] "\x16\x03\x01\x01\x0C\x01\x00\x01\x08\x03\x03\x81}\xDB\x11\xF0" 400 226 "
+[WARN] 无法解析: 103.218.243.246 - - [25/Jun/2026:09:35:10 +0800] "\xFF\x00\x00\x00\x00\x00\x00\x00\x00\x7F\x03\x01NULL\x00\x00\x00\x00\x
+[WARN] 无法解析: 103.218.243.246 - - [25/Jun/2026:09:35:11 +0800] "\xFF\x00\x00\x00\x00\x00\x00\x00\x00\x7F\x03\x01NULL\x00\x00\x00\x00\x
+[WARN] 无法解析: 103.218.243.246 - - [25/Jun/2026:09:35:13 +0800] "\xFF\x00\x00\x00\x00\x00\x00\x00\x00\x7F\x03\x01NULL\x00\x00\x00\x00\x
+[WARN] 无法解析: 93.174.93.12 - - [25/Jun/2026:10:25:46 +0800] "\x16\x03\x02\x01o\x01\x00\x01k\x03\x02RH\xC5\x1A#\xF7:N\xDF\xE2\xB4\x82/\
+[WARN] 无法解析: 184.105.247.252 - - [25/Jun/2026:11:16:12 +0800] "\x16\x03\x01\x00\xF2\x01\x00\x00\xEE\x03\x03X\x0B" 400 226 "-" "-"
+[WARN] 无法解析: 184.105.247.252 - - [25/Jun/2026:11:16:13 +0800] "\x16\x03\x01\x00\xA0\x01\x00\x00\x9C\x03\x03q\x5C\xA9|\x5C\xA7\xA5\xF2
+[WARN] 无法解析: 35.187.20.159 - - [25/Jun/2026:13:34:16 +0800] "\x16\x03\x00\x00i\x01\x00\x00e\x03\x03U\x1C\xA7\xE4random1random2random3
+共解析 192 条日志
+注：127.0.0.1 在 config.lua 的 ipWhitelist 中，WAF 对其直接放行
+
+================================================================================
+一、已确认被 WAF 拦截的请求（命中规则且状态码 {400, 403, 404, 503, 444}）: 23 条
+================================================================================
+  [403] 8.216.5.111 GET /
+       UA: curl/7.64.1
+       命中: UA: (curl|wget|ApacheBench|httpie|PostmanRuntime|Insomnia|node-f
+  [403] 8.216.5.111 GET /
+       UA: curl/7.74.0
+       命中: UA: (curl|wget|ApacheBench|httpie|PostmanRuntime|Insomnia|node-f
+  [403] 45.148.10.200 GET /
+       UA: l9tcpid/v1.1.0
+       命中: UA: (l9explore|l9tcpid|LeakIX|ModatScanner|GenomeCrawlerd|CyberC
+  [404] 45.148.10.200 GET /.gitconfig
+       UA: l9explore/1.2.2
+       命中: UA: (l9explore|l9tcpid|LeakIX|ModatScanner|GenomeCrawlerd|CyberC | DANGEROUS: ^/\..*$ | URL: \.(git|svn|htaccess|bash_history|git_combo.debug.js|_combo.j
+  [404] 45.148.10.200 GET /.envrc.local
+       UA: l9explore/1.2.2
+       命中: UA: (l9explore|l9tcpid|LeakIX|ModatScanner|GenomeCrawlerd|CyberC | DANGEROUS: ^/\..*$ | URL: \.(git|svn|htaccess|bash_history|git_combo.debug.js|_combo.j
+  [404] 45.148.10.200 GET /.env.local
+       UA: l9explore/1.2.2
+       命中: UA: (l9explore|l9tcpid|LeakIX|ModatScanner|GenomeCrawlerd|CyberC | DANGEROUS: ^/\..*$ | URL: \.(git|svn|htaccess|bash_history|git_combo.debug.js|_combo.j
+  [404] 45.148.10.200 GET /.env.dev
+       UA: l9explore/1.2.2
+       命中: UA: (l9explore|l9tcpid|LeakIX|ModatScanner|GenomeCrawlerd|CyberC | DANGEROUS: ^/\..*$ | URL: \.(git|svn|htaccess|bash_history|git_combo.debug.js|_combo.j
+  [404] 45.148.10.200 GET /.env.save
+       UA: l9explore/1.2.2
+       命中: UA: (l9explore|l9tcpid|LeakIX|ModatScanner|GenomeCrawlerd|CyberC | DANGEROUS: ^/\..*$ | URL: \.(git|svn|htaccess|bash_history|git_combo.debug.js|_combo.j
+  [403] 45.148.10.200 GET /
+       UA: l9tcpid/v1.1.0
+       命中: UA: (l9explore|l9tcpid|LeakIX|ModatScanner|GenomeCrawlerd|CyberC
+  [404] 45.148.10.200 GET /server/.env
+       UA: l9explore/1.2.2
+       命中: UA: (l9explore|l9tcpid|LeakIX|ModatScanner|GenomeCrawlerd|CyberC | DANGEROUS: \.(env|ini|conf|config|properties|yml|yaml)$ | URL: \.(git|svn|htaccess|bash_history|git_combo.debug.js|_combo.j
+  [404] 45.148.10.200 GET /.git-credentials
+       UA: l9explore/1.2.2
+       命中: UA: (l9explore|l9tcpid|LeakIX|ModatScanner|GenomeCrawlerd|CyberC | DANGEROUS: ^/\..*$ | URL: \.(git|svn|htaccess|bash_history|git_combo.debug.js|_combo.j
+  [404] 45.148.10.200 GET /.env.local
+       UA: l9explore/1.2.2
+       命中: UA: (l9explore|l9tcpid|LeakIX|ModatScanner|GenomeCrawlerd|CyberC | DANGEROUS: ^/\..*$ | URL: \.(git|svn|htaccess|bash_history|git_combo.debug.js|_combo.j
+  [404] 45.148.10.200 GET /.env.dev
+       UA: l9explore/1.2.2
+       命中: UA: (l9explore|l9tcpid|LeakIX|ModatScanner|GenomeCrawlerd|CyberC | DANGEROUS: ^/\..*$ | URL: \.(git|svn|htaccess|bash_history|git_combo.debug.js|_combo.j
+  [400] 45.205.1.244 GET /
+       UA: curl/7.68.0
+       命中: UA: (curl|wget|ApacheBench|httpie|PostmanRuntime|Insomnia|node-f
+  [403] 45.198.224.245 PROPFIND /
+       UA: -
+       命中: METHOD: (TRACE|TRACK|PROPFIND|MKCOL|MOVE|COPY|LOCK|UNLOCK|SSTP_DUPLE
+  [403] 35.233.19.108 GET /
+       UA: python-requests/2.32.5
+       命中: UA: (cdn-detect|SemrushBot|pyspider|Scrapy|python-requests|Pytho
+  [403] 46.151.178.13 PROPFIND /
+       UA: -
+       命中: METHOD: (TRACE|TRACK|PROPFIND|MKCOL|MOVE|COPY|LOCK|UNLOCK|SSTP_DUPLE
+  [400] 223.85.102.138 POST /cgi-bin/.%2e/.%2e/.%2e/.%2e/.%2e/.%2e/.%2e/.%2e/.%2e/.%2e/bin/sh
+       UA: -
+       命中: DANGEROUS: /bin/(ba)?sh | URL: ^/cgi-bin(/.*)?$ | TRAVERSAL: (\.\./|\.(%2e)|(%2e)\.|%2e%2e|%252e|\%00)
+  [403] 172.203.234.251 GET /owa/auth/logon.aspx
+       UA: Mozilla/5.0 zgrab/0.x
+       命中: UA: (Nuclei|Censys|Shodan|ZoomEye|Gobuster|Ffuf|Zgrab|nmap)
+  [404] 65.49.20.68 GET /.git/config
+       UA: Mozilla/5.0 (Windows NT 6.1; ) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122
+       命中: DANGEROUS: ^/\..*$ | URL: \.(git|svn|htaccess|bash_history|git_combo.debug.js|_combo.j
+  [403] 20.64.104.65 GET /developmentserver/metadatauploader
+       UA: Mozilla/5.0 zgrab/0.x
+       命中: UA: (Nuclei|Censys|Shodan|ZoomEye|Gobuster|Ffuf|Zgrab|nmap) | DANGEROUS: /developmentserver/metadatauploader
+  [400] 45.194.67.29 GET /
+       UA: curl/7.68.0
+       命中: UA: (curl|wget|ApacheBench|httpie|PostmanRuntime|Insomnia|node-f
+  [403] 135.237.126.218 GET /
+       UA: Mozilla/5.0 zgrab/0.x
+       命中: UA: (Nuclei|Censys|Shodan|ZoomEye|Gobuster|Ffuf|Zgrab|nmap)
+
+================================================================================
+二、命中 WAF 规则但未被拦截的请求（漏过）: 34 条
+================================================================================
+  [200] 205.210.31.37 GET /
+       UA: Hello from Palo Alto Networks, find out more about our scans in https://docs-cor
+       应命中: UA: (l9explore|l9tcpid|LeakIX|ModatScanner|GenomeCrawlerd|CyberC
+  [301] 34.158.242.245 GET /next.config.js
+       UA: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/118.0
+       应命中: DANGEROUS: ^/next\.config\.(js|mjs|ts)$
+  [301] 34.158.242.245 GET /next.config.js
+       UA: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/118.0
+       应命中: DANGEROUS: ^/next\.config\.(js|mjs|ts)$
+
+  （其中 31 条来自白名单 IP 127.0.0.1，属于预期放行）
+  ... [200] 127.0.0.1 GET / 应命中 UA: (curl|wget|ApacheBench|httpie|PostmanRuntime|Insomnia|node-f
+  ... [200] 127.0.0.1 GET / 应命中 UA: (curl|wget|ApacheBench|httpie|PostmanRuntime|Insomnia|node-f
+  ... [200] 127.0.0.1 GET / 应命中 UA: (curl|wget|ApacheBench|httpie|PostmanRuntime|Insomnia|node-f
+  ... 还有 28 条白名单请求省略
+
+================================================================================
+三、状态码 400 但无法确认是否 WAF 拦截的异常请求: 3 条
+================================================================================
+  [400] 45.148.10.200 GET /
+       UA: -
+  [400] 45.148.10.200 GET /
+       UA: -
+  [400] 151.243.11.35 GET /
+       UA: -
+
+================================================================================
+四、未命中 WAF 规则但属于扫描/探测行为的请求
+================================================================================
+  [200] 210.16.164.129 GET /
+       UA: Mozilla/5.0
+  [301] 103.218.243.246 GET /version
+       UA: -
+  [200] 103.218.243.246 GET /
+       UA: -
+  [200] 103.218.243.246 GET /
+       UA: -
+  [301] 103.218.243.246 GET /v1
+       UA: -
+  [200] 103.218.243.246 GET /
+       UA: -
+  [200] 103.203.56.1 GET /
+       UA: HTTP Banner Detection (https://security.ipip.net)
+  [200] 45.198.224.245 GET /
+       UA: Mozilla/5.0
+  [301] 151.242.30.224 GET /api/auth/validate-sso
+       UA: -
+  [308] 184.105.247.252 GET /geoserver/web/
+       UA: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like 
+  [200] 220.78.38.113 GET /
+       UA: -
+  [301] 34.158.242.245 POST /
+       UA: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/118.0
+  [301] 34.158.242.245 POST /
+       UA: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/118.0
+  [301] 202.61.130.107 POST /
+       UA: Mozilla/5.0 (CentOS; Linux i686) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/1
+  [301] 202.61.130.107 POST /
+       UA: Mozilla/5.0 (X11; Linux x86_64; rv:1.9.6.20) Gecko/ Firefox/3.6.5
+  [308] 65.49.20.68 GET /geoserver/web/
+       UA: Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:140.0) Gecko/20100101 Firefox/1
+  [200] 125.139.77.147 GET /
+       UA: -
+  [301] 210.217.42.139 POST /
+       UA: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like 
+  [301] 61.172.57.230 GET /%E3%80%81
+       UA: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko)
+  [405] 35.187.20.159 POST /
+       UA: Mozilla/5.0 (compatible)
+  [200] 103.203.59.1 GET /
+       UA: HTTP Banner Detection (https://security.ipip.net)
+   合计 21 条
+

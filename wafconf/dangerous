@@ -147,6 +147,13 @@ bash\.exe
 ^/v1/completions$
 ^/v1/chat/completions$
 
+# 通用版本/API 根路径探测
+^/version$
+^/v1$
+
+# GeoServer 管理后台探测
+^/geoserver/web(/.*)?$
+
 # [php]
 ^/_ignition(/.*)?$
 ^/telescope(/.*)?$
