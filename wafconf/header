@@ -1,38 +1,59 @@
 # [core]
 
 # 代理伪造 / IP 欺骗（攻击者伪造代理头绕过 IP 限制）
+# 代理伪造：检测 X-Forwarded-Host
 ^X-Forwarded-Host:
+# 代理伪造：检测 X-Real-IP
 ^X-Real-IP:
+# 代理伪造：检测 X-Originating-IP
 ^X-Originating-IP:
+# 代理伪造：检测 X-Remote-IP
 ^X-Remote-IP:
+# 代理伪造：检测 X-Remote-Addr
 ^X-Remote-Addr:
+# 代理伪造：检测 True-Client-IP
 ^True-Client-IP:
+# 代理伪造：检测 Client-IP
 ^Client-IP:
+# IP 欺骗：X-Forwarded-For 含内网 IP
 ^X-Forwarded-For:.*(127\.0\.0\.1|0\.0\.0\.0|10\.\d{1,3}\.\d{1,3}\.\d{1,3}|172\.(1[6-9]|2\d|3[01])\.\d{1,3}\.\d{1,3}|192\.168\.\d{1,3}\.\d{1,3})
 
 # HTTP 请求走私
+# HTTP 请求走私：检测 Transfer-Encoding
 ^Transfer-Encoding:
 
 # Header 注入攻击（SQLi / XSS 载荷植入 Header）
+# Header 注入：检测 sleep 函数
 sleep\(
+# Header 注入：检测 benchmark 函数
 benchmark\(
+# Header 注入：检测 union select
 union\s+select
+# Header 注入：检测 drop table
 drop\s+table
+# Header 注入：检测 script 标签
 <script
+# Header 注入：检测 javascript 伪协议
 javascript:
+# Header 注入：检测 JNDI 载荷
 \$\{jndi:
 
 # DoS / 超大请求
+# DoS：检测异常大 Content-Length
 ^Content-Length:\s*(9\d{8}|\d{10,})
 
 # CRLF 注入（Header 值中包含换行符）
+# CRLF 注入：检测换行符
 \n
+# CRLF 注入：检测回车符
 \r
 
 # [aggressive]
 
 # 所有 X-Forwarded-* 头（激进模式：正常反向代理场景会误伤）
+# 激进模式：拦截所有 X-Forwarded-* 头
 ^X-Forwarded-
 
 # 所有自定义 IP 头（激进模式）
+# 激进模式：拦截所有 X-*-IP 头
 ^X-.*-IP:
