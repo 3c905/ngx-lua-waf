@@ -17,7 +17,8 @@
 
 # 5. 应用层扫描器 / 商业/组织扫描器 / 互联网测绘平台
 # l9explore/l9tcpid = LeakIX 扫描器；Palo Alto / Cortex Xpanse = 帕洛阿尔托资产测绘
-(l9explore|l9tcpid|LeakIX|ModatScanner|GenomeCrawlerd|CyberConvoyScout|InternetMeasurement|Palo\s*Alto|Cortex\s*Xpanse|visionheight\.com|Scanner/|NTRIP|WebCopier)
+# Infrawatch = 互联网基础设施测绘/扫描
+(l9explore|l9tcpid|LeakIX|ModatScanner|GenomeCrawlerd|CyberConvoyScout|InternetMeasurement|Palo\s*Alto|Cortex\s*Xpanse|visionheight\.com|Scanner/|NTRIP|WebCopier|Infrawatch)
 
 # 5.1 HTTP Banner / 指纹识别类扫描器
 (HTTP\s+Banner\s+Detection|ipip\.net|Banner\s+Detection)
