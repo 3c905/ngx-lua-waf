@@ -127,8 +127,10 @@ bash\.exe
 
 # 环境变量 / 凭证文件（任意路径）
 \.env(\.[a-zA-Z0-9_-]+)?$
+\.env\..*\.(php|bak|backup|old|orig|save)$
 \.git-credentials
 \.gitconfig
+\.git/
 
 # [nodejs]
 ^/__webpack_dev_server__(/.*)?$

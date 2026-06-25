@@ -15,8 +15,8 @@
 # 4. 资产测绘 / 目录爆破 / 批量探测工具
 (Nuclei|Censys|Shodan|ZoomEye|Gobuster|Ffuf|Zgrab|nmap)
 
-# 5. 应用层扫描器（l9 系列）
-(l9explore|l9tcpid)
+# 5. 应用层扫描器 / 商业/组织扫描器
+(l9explore|l9tcpid|ModatScanner|GenomeCrawlerd|CyberConvoyScout|InternetMeasurement|Palo\s*Alto|Cortex\s*Xpanse|visionheight\.com|Scanner/|NTRIP|WebCopier)
 
 # 6. 开发工具 / 命令行客户端 / 测试库
 (curl|wget|ApacheBench|httpie|PostmanRuntime|Insomnia|node-fetch|Go-http-client|Java)
