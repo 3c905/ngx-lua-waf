@@ -32,7 +32,7 @@ black_fileExt={"php","jsp","aspx","py","sh"}
 ipWhitelist={"127.0.0.1"}
 
 -- IP 黑名单：支持精确 IP 和 CIDR 网段
-ipBlocklist={"1.0.0.1"}
+ipBlocklist={"1.0.0.1","162.216.150.244"}
 
 -- CC 防护：格式 "请求数/时间(秒)"
 -- 场景 A: off           | 场景 B/C/D: "600/60"  | 场景 E: "120/60"

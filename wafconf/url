@@ -10,3 +10,6 @@
 java\.lang
 /(attachments|upimg|images|css|uploadfiles|html|uploads|templets|static|template|data|inc|forumdata|upload|includes|cache|avatar)/(\\w+).(php|jsp)
 
+# SMB 协议探测 / 扫描拦截（如 EternalBlue、SMB 服务枚举）
+(SMBr|SMB@|NT LM 0\.12)
+
