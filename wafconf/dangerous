@@ -48,6 +48,13 @@ swagger\.json
 ^/(upload|uploads|uploadfiles?|upimg|attachment|attachments|static/upload)/.*\.(php\d*|jsp|jspx|asp|aspx|cgi|py|sh|pl|rb)$
 
 # ========== 已知高危漏洞路径 ==========
+
+# 代理滥用 / SSRF：请求 URI 为完整 URL
+^https?://
+
+# PHPUnit RCE (CVE-2017-9841)
+/vendor/phpunit/phpunit/src/Util/PHP/eval-stdin\.php
+
 /autodiscover/autodiscover\.json
 /@zdi/
 /Powershell

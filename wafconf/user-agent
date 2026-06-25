@@ -10,7 +10,7 @@
 (cdn-detect|SemrushBot|pyspider|Scrapy|python-requests|Python-urllib|HTTrack|harvest|Parser|libwww|BBBike|PycURL|zmeu|BabyKrokodil|httperf|SF/|Office)
 
 # 3. Web 漏洞扫描器 / 安全审计工具
-(nikto|acunetix|masscan|wpscan|sqlmap|w3af|owasp|fimap|havij|netsparker|dirbuster|pangolin|sqln|-scan|audit|hydra)
+(nikto|acunetix|masscan|wpscan|sqlmap|w3af|owasp|fimap|havij|netsparker|dirbuster|pangolin|sqln|-scan|audit|hydra|libredtail)
 
 # 4. 资产测绘 / 目录爆破 / 批量探测工具
 (Nuclei|Censys|Shodan|ZoomEye|Gobuster|Ffuf|Zgrab|nmap)
