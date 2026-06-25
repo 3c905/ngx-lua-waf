@@ -34,8 +34,18 @@ swagger\.json
 ^/(shell|cmd|webshell|c99|r57)\.
 ^/wp-(login|config|admin)
 
-# 上传目录禁止执行脚本
-^/upload/.*\.(php\d*|jsp|jspx|asp|aspx|cgi|py|sh|pl|rb)$
+# 常见 CMS / 框架后台入口与安装目录探测
+^/admin\.php$
+^/admin/login\.php$
+^/apps/admin(/.*)?$
+^/app/install(/.*)?$
+^/install/controller(/.*)?$
+^/public/static/admin(/.*)?$
+^/static/upload/image/.*\.(php\d*|jsp|asp|aspx|sh|py|pl)$
+^/dd\.php$
+
+# 上传目录禁止执行脚本（扩展覆盖常见上传目录）
+^/(upload|uploads|uploadfiles?|upimg|attachment|attachments|static/upload)/.*\.(php\d*|jsp|jspx|asp|aspx|cgi|py|sh|pl|rb)$
 
 # ========== 已知高危漏洞路径 ==========
 /autodiscover/autodiscover\.json
@@ -155,15 +165,31 @@ bash\.exe
 ^/geoserver/web(/.*)?$
 
 # [php]
+
+# Laravel 调试/后台/文件管理器
 ^/_ignition(/.*)?$
 ^/telescope(/.*)?$
 ^/horizon(/.*)?$
+^/nova(/.*)?$
+^/filament(/.*)?$
+^/backpack(/.*)?$
+^/laravel-filemanager(/.*)?$
+^/filemanager(/.*)?$
+^/vendor(/.*)?$
 ^/phpunit\.xml(\.dist)?$
 ^/\.user\.ini$
+^/server\.php$          # Laravel 开发入口，生产环境不应直接访问
+
+# ThinkPHP
 ^/thinkphp(/.*)?$
 ^/wp-config\.php$
 ^/wp-admin/install\.php$
+^/wp-admin/setup-config\.php$
+^/wp-admin/maint/repair\.php$
 ^/wp-content/debug\.log$
+^/xmlrpc\.php$
+^/wp-json/wp/v2/users(/.*)?$
+^/wp-config\.php\.(bak|backup|old|orig|save|swp|tmp|temp|dist|sample|example)$
 
 # [aggressive]
 
