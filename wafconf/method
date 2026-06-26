@@ -6,15 +6,21 @@
 # ============================================================
 
 # 1. WebDAV / 危险 HTTP 方法
+# WebDAV/危险 HTTP 方法
 (TRACE|TRACK|PROPFIND|MKCOL|MOVE|COPY|LOCK|UNLOCK|SSTP_DUPLEX_POST)
 
 # 2. 扫描器/探测协议非标准方法前缀
+# 扫描器/探测协议非标准方法前缀
 (KYIT|MGLNDD_|OFSC)
 
 # 3. RAT / 远控木马常见通信特征
 #    AsyncRAT / QuasarRAT 等家族常用字段分隔符、上线标识、客户端文件名
-#    注：传输中标识多为 Base64 编码，同时覆盖明文与编码形式
+#    注：传输中多为 Base64 编码，同时覆盖明文与编码形式
+# RAT 通信：AsyncRAT 等上线标识
 (HacKed_|SGFjS2Vk)
-(clienta\.exe)
+# RAT 通信：客户端文件名特征
+(clienta\.exe|Y2xpZW50YS5leGU)
+# RAT 通信：Base64 填充特征
 (AA==)
+# RAT 通信：字段分隔符特征
 (\|'\|'\|)
