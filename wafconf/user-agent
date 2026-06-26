@@ -1,38 +1,76 @@
-# ============================================================
-# User-Agent 黑名单
-# 按攻击类型/客户端类型分组，命中后日志会显示完整 rule，便于溯源
-# ============================================================
-
-# 1. 搜索引擎 / 合规爬虫
-# 搜索引擎/AI 爬虫
-(Amazonbot|OAI-SearchBot|GPTBot|YisouSpider)
-
-# 2. 常见爬虫 / 数据采集程序 / 未授权自动化工具
-# 常见爬虫/数据采集工具
-(cdn-detect|SemrushBot|pyspider|Scrapy|python-requests|Python-urllib|HTTrack|harvest|Parser|libwww|BBBike|PycURL|zmeu|BabyKrokodil|httperf|SF/|Office)
-
-# 3. Web 漏洞扫描器 / 安全审计工具
-# Web 漏洞扫描器
-(nikto|acunetix|masscan|wpscan|sqlmap|w3af|owasp|fimap|havij|netsparker|dirbuster|pangolin|sqln|-scan|audit|hydra|libredtail)
-
-# 4. 资产测绘 / 目录爆破 / 批量探测工具
-# 资产测绘/目录爆破工具
-(Nuclei|Censys|Shodan|ZoomEye|Gobuster|Ffuf|Zgrab|nmap)
-
-# 5. 应用层扫描器 / 商业/组织扫描器 / 互联网测绘平台
-# l9explore/l9tcpid = LeakIX 扫描器；Palo Alto / Cortex Xpanse = 帕洛阿尔托资产测绘
-# Infrawatch = 互联网基础设施测绘/扫描
-# 商业/组织扫描器与测绘平台
-(l9explore|l9tcpid|LeakIX|ModatScanner|GenomeCrawlerd|CyberConvoyScout|InternetMeasurement|Palo\s*Alto|Cortex\s*Xpanse|visionheight\.com|Scanner/|NTRIP|WebCopier|Infrawatch)
-
-# 5.1 HTTP Banner / 指纹识别类扫描器
-# HTTP Banner/指纹识别扫描器
-(HTTP\s+Banner\s+Detection|ipip\.net|Banner\s+Detection)
-
-# 6. 开发工具 / 命令行客户端 / 测试库
-# CC / 压力测试 / 批量拨测工具
-# FTDv3 Browser / AvaliablePing = 常见低成本 CC/压力测试客户端
-(FTDv3|AvaliablePing)
-
-# 开发工具/命令行客户端
-(curl|wget|ApacheBench|httpie|PostmanRuntime|Insomnia|node-fetch|Go-http-client|Java)
+# ============================================================
+
+# User-Agent 黑名单
+
+# 按攻击类型/客户端类型分组，命中后日志会显示完整 rule，便于溯源
+
+# ============================================================
+
+
+
+# 1. 搜索引擎 / 合规爬虫
+
+# 搜索引擎/AI 爬虫
+
+(Amazonbot|OAI-SearchBot|GPTBot|YisouSpider)
+
+
+
+# 2. 常见爬虫 / 数据采集程序 / 未授权自动化工具
+
+# 常见爬虫/数据采集工具
+
+(cdn-detect|SemrushBot|pyspider|Scrapy|python-requests|Python-urllib|HTTrack|harvest|Parser|libwww|BBBike|PycURL|zmeu|BabyKrokodil|httperf|SF/|Office)
+
+
+
+# 3. Web 漏洞扫描器 / 安全审计工具
+
+# Web 漏洞扫描器
+
+(nikto|acunetix|masscan|wpscan|sqlmap|w3af|owasp|fimap|havij|netsparker|dirbuster|pangolin|sqln|-scan|audit|hydra|libredtail)
+
+
+
+# 4. 资产测绘 / 目录爆破 / 批量探测工具
+
+# 资产测绘/目录爆破工具
+
+(Nuclei|Censys|Shodan|ZoomEye|Gobuster|Ffuf|Zgrab|nmap)
+
+
+
+# 5. 应用层扫描器 / 商业/组织扫描器 / 互联网测绘平台
+
+# l9explore/l9tcpid = LeakIX 扫描器；Palo Alto / Cortex Xpanse = 帕洛阿尔托资产测绘
+
+# Infrawatch = 互联网基础设施测绘/扫描
+
+# 商业/组织扫描器与测绘平台
+
+(l9explore|l9tcpid|LeakIX|ModatScanner|GenomeCrawlerd|CyberConvoyScout|InternetMeasurement|Palo\s*Alto|Cortex\s*Xpanse|visionheight\.com|Scanner/|NTRIP|WebCopier|Infrawatch)
+
+
+
+# 5.1 HTTP Banner / 指纹识别类扫描器
+
+# HTTP Banner/指纹识别扫描器
+
+(HTTP\s+Banner\s+Detection|ipip\.net|Banner\s+Detection)
+
+
+
+# 6. 开发工具 / 命令行客户端 / 测试库
+
+# CC / 压力测试 / 批量拨测工具
+
+# AvaliablePing = 常见低成本 CC/压力测试客户端（FTDv3 Browser 已允许访问，不加入黑名单）
+
+(AvaliablePing)
+
+
+
+# 开发工具/命令行客户端
+
+(curl|wget|ApacheBench|httpie|PostmanRuntime|Insomnia|node-fetch|Go-http-client|Java)
+
