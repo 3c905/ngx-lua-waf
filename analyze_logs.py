@@ -38,12 +38,16 @@ def parse_log_line(line):
         return None
     ip, time, request, status, size, referer, ua = m.groups()
     # 解析 method, uri, protocol
+    # 兼容非标准请求行（如扫描器 / RAT 通信没有空格分隔 method 与 uri）
     req_parts = request.split(' ', 2)
-    if len(req_parts) < 2:
-        return None
-    method = req_parts[0]
-    uri_with_query = req_parts[1] if len(req_parts) >= 2 else '/'
-    protocol = req_parts[2] if len(req_parts) >= 3 else ''
+    if len(req_parts) == 1:
+        method = req_parts[0]
+        uri_with_query = '/'
+        protocol = ''
+    else:
+        method = req_parts[0]
+        uri_with_query = req_parts[1] if len(req_parts) >= 2 else '/'
+        protocol = req_parts[2] if len(req_parts) >= 3 else ''
     return {
         'ip': ip,
         'time': time,
