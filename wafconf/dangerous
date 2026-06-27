@@ -26,8 +26,24 @@ swagger\.json
 ^/redoc$
 
 # phpinfo / 状态页
-# -> phpinfo 信息页
+# -> phpinfo 信息页（常见变体）
 ^/phpinfo\.php$
+^/phpinfo2\.php$
+^/php_info\.php$
+^/pinfo\.php$
+^/pi\.php$
+^/i\.php$
+^/php\.php$
+^/server-info\.php$
+^/php_version\.php$
+^/version\.php$
+^/env\.php$
+^/init\.php$
+^/test\.php$
+# -> 无扩展名 phpinfo 探测
+^/phpinfo$
+# -> 后台目录下的 phpinfo 探测
+^/admin/phpinfo\.php$
 # -> info 信息页
 ^/info\.php$
 # -> Nginx 状态页
@@ -82,6 +98,14 @@ swagger\.json
 ^/admin/(config|inc/config)\.php$
 # -> 通用 admin controller 路径探测
 ^/admin/controller(/.*)?$
+# -> 通用 admin reports 路径探测
+^/admin/reports(/.*)?$
+# -> 常见企业管理/控制台入口探测（扫描器高频目标）
+^/CFIDE(/.*)?$
+^/owa(/.*)?$
+^/pandora_console(/.*)?$
+^/kylin(/.*)?$
+^/core/auth/login(/.*)?$
 
 # -> ThinkPHP / 通用 admin 上传接口探测
 ^/index\.php\?s=/admin/upload
@@ -254,6 +278,12 @@ bash\.exe
 # -> 常见 WebShell/命令执行文件名
 (webshell|c99|r57|china|fx29|shell|cmd|exec|eval|upload|manager)\.((php|jsp|asp|aspx|cgi|pl|sh|py)(\d?))
 
+# Trend Micro OfficeScan / Apex One 历史漏洞探测
+# -> OfficeScan 控制台密码验证 CGI
+/officescan/console/cgi/cgiChkMasterPwd\.exe
+# -> OfficeScan 控制台静态资源路径
+^/officescan/console(/.*)?$
+
 # [java]
 # -> Java Druid 监控后台
 ^/druid(/.*)?$
@@ -311,6 +341,7 @@ bash\.exe
 # GeoServer 管理后台探测
 # -> GeoServer 管理后台
 ^/geoserver/web(/.*)?$
+^/geoserver(/index\.html)?$
 
 # [php]
 

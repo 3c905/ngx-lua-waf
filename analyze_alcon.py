@@ -19,6 +19,7 @@ import re
 import os
 import sys
 import argparse
+import codecs
 from collections import Counter, defaultdict
 from urllib.parse import unquote, urlparse
 
@@ -191,8 +192,13 @@ def check_ua(ua, rules):
 
 
 def check_method(method, rules):
+    # 日志中二进制协议常被转义为 \xNN，匹配前先解码
+    try:
+        decoded_method = codecs.decode(method, 'unicode_escape')
+    except Exception:
+        decoded_method = method
     for rule in rules:
-        if lua_re_match(method, rule):
+        if lua_re_match(decoded_method, rule):
             return ('METHOD', rule)
     return None
 
