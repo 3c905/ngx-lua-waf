@@ -1,458 +1,693 @@
 # [core]
+# 核心规则：误伤低，建议所有场景开启
 
-# 隐藏文件（根路径下以 . 开头的文件/目录）
+# 隐藏文件/目录（根路径下以 . 开头）
 # .well-known 通过 wafconf/whiteurl 放行
-# -> 隐藏文件/目录访问
 ^/\..*$
 
-# Spring Boot Actuator 敏感端点（不含 health）
-# -> Spring Boot Actuator 敏感端点
-^/actuator/(env|beans|heapdump|threaddump|metrics|prometheus|mappings|configprops|loggers|conditions|caches|scheduledtasks)$
+# Spring Boot Actuator 敏感端点（不含 health，避免 K8s 探针失效）
+^/actuator/(env|beans|heapdump|threaddump|mappings|configprops|loggers|conditions|caches|scheduledtasks)$
 
 # Swagger / OpenAPI
-# -> Swagger API 文档泄露
-swagger\.json
-# -> Swagger UI 入口
-^/swagger-ui(/.*)?$
-# -> Swagger 资源接口
-^/swagger-resources(/.*)?$
-# -> Swagger v2 API 文档
-^/v2/api-docs(/.*)?$
-# -> OpenAPI v3 API 文档
-^/v3/api-docs(/.*)?$
-# -> OpenAPI 文档
+swagger\.json(?:[/?#]|$)
+^/swagger-ui(?:/.*)?$
+^/swagger-resources(?:/.*)?$
+^/v2/api-docs(?:/.*)?$
+^/v3/api-docs(?:/.*)?$
 ^/openapi\.json$
-# -> ReDoc 文档
 ^/redoc$
 
-# phpinfo / 状态页
-# -> phpinfo 信息页（常见变体）
+# phpinfo / 状态页（常见变体）
 ^/phpinfo\.php$
 ^/phpinfo2\.php$
 ^/php_info\.php$
 ^/pinfo\.php$
 ^/pi\.php$
-^/i\.php$
 ^/php\.php$
 ^/server-info\.php$
 ^/php_version\.php$
-^/version\.php$
-^/env\.php$
-^/init\.php$
-^/test\.php$
-# -> 无扩展名 phpinfo 探测
-^/phpinfo$
-# -> 后台目录下的 phpinfo 探测
-^/admin/phpinfo\.php$
-# -> info 信息页
 ^/info\.php$
-# -> Nginx 状态页
+^/phpinfo$
+^/admin/phpinfo\.php$
 ^/nginx_status$
-# -> Apache 状态页
 ^/server-status$
 
 # 调试工具
-# -> Go pprof 调试接口
-^/debug/pprof(/.*)?$
-# -> Debugbar 调试工具
-^/_debugbar(/.*)?$
-# -> Symfony Profiler
-^/_profiler(/.*)?$
+^/debug/pprof(?:/.*)?$
+^/_debugbar(?:/.*)?$
+^/_profiler(?:/.*)?$
 
-# AI / Notebook / LLM Debug
-# -> AI/Notebook 平台入口
-^/(gradio|streamlit|jupyter|notebook)(/.*)?$
+# AI / Notebook / LLM 平台入口
+^/(gradio|streamlit|jupyter|notebook)(?:/.*)?$
 
-# 补充屏蔽路径
-^/(shell|cmd|webshell|c99|r57)\.
-# -> WordPress 后台/配置入口
-^/wp-(login|config|admin)
+# 已知 WebShell / 命令执行文件名（限定脚本扩展名）
+^/(shell|cmd|webshell|c99|r57|china|fx29|exec|eval)\.(?:php\d?|jsp|asp|aspx|cgi|pl|sh|py)$
 
-# -> WordPress 上传/主题目录 PHP 文件执行探测
-^/wp-content/(uploads|themes)/.*\.(php\d*|phtml)$
-# -> WordPress wp-content 根目录可疑 PHP 文件
-^/wp-content/[^/]+\.(php\d*|phtml)$
-
-# -> WordPress wlwmanifest 探测
+# WordPress 敏感入口
+^/wp-config\.php$
+^/wp-admin/install\.php$
+^/wp-admin/setup-config\.php$
+^/wp-admin/maint/repair\.php$
+^/wp-content/debug\.log$
 ^/wp-includes/wlwmanifest\.xml$
+^/xmlrpc\.php$
+^/wp-json/wp/v2/users(?:/.*)?$
+^/wp-config\.php\.(?:bak|backup|old|orig|save|swp|tmp|temp|dist|sample|example)$
+# WordPress 上传/主题目录脚本执行
+^/wp-content/(?:uploads|themes)/.*\.(?:php\d?|phtml)$
+^/wp-content/[^/]+\.(?:php\d?|phtml)$
 
-# 常见 CMS / 框架后台入口与安装目录探测
-# -> 通用 admin.php 入口
+# 常见 CMS / 框架后台入口（精确路径）
 ^/admin\.php$
-# -> 通用 admin 登录页
 ^/admin/login\.php$
-# -> 应用后台入口
-^/apps/admin(/.*)?$
-# -> 应用安装目录
-^/app/install(/.*)?$
-# -> 安装控制器目录
-^/install/controller(/.*)?$
-# -> 静态资源后台路径
-^/public/static/admin(/.*)?$
-# -> 上传图片目录脚本执行
-^/static/upload/image/.*\.(php\d*|jsp|asp|aspx|sh|py|pl)$
-# -> 可疑 PHP 文件 dd.php
-^/dd\.php$
-
-# -> 通用后台配置文件探测
-^/admin/(config|inc/config)\.php$
-# -> 通用 admin controller 路径探测
-^/admin/controller(/.*)?$
-# -> 通用 admin reports 路径探测
-^/admin/reports(/.*)?$
-# -> 常见企业管理/控制台入口探测（扫描器高频目标）
-^/CFIDE(/.*)?$
-^/owa(/.*)?$
-^/pandora_console(/.*)?$
-^/kylin(/.*)?$
-^/core/auth/login(/.*)?$
-
-# -> ThinkPHP / 通用 admin 上传接口探测
+^/admin/(?:config|inc/config)\.php$
+^/CFIDE(?:/.*)?$
+^/owa(?:/.*)?$
+^/pandora_console(?:/.*)?$
+^/kylin(?:/.*)?$
+^/core/auth/login(?:/.*)?$
 ^/index\.php\?s=/admin/upload
 /admin/upload/
-
-# -> 帝国 CMS 安装入口探测
 ^/e/install/
 
-# 上传目录禁止执行脚本（扩展覆盖常见上传目录）
-# -> 上传目录脚本执行
-^/(upload|uploads|uploadfiles?|upimg|attachment|attachments|static/upload)/.*\.(php\d*|jsp|jspx|asp|aspx|cgi|py|sh|pl|rb)$
+# 上传目录禁止执行脚本
+^/(?:upload|uploads|uploadfiles?|upimg|attachment|attachments|static/upload)/.*\.(?:php\d?|jsp|jspx|asp|aspx|cgi|py|sh|pl|rb)$
+
+# 代理滥用：请求 URI 为完整 URL
+^https?://
 
 # ========== 已知高危漏洞路径 ==========
 
-# 代理滥用 / SSRF：请求 URI 为完整 URL
-# -> 代理滥用：请求 URI 为完整 URL
-^https?://
-
 # PHPUnit RCE (CVE-2017-9841)
-# -> PHPUnit RCE (CVE-2017-9841)
 /vendor/phpunit/phpunit/src/Util/PHP/eval-stdin\.php
 
-# -> Exchange Autodiscover SSRF/泄露
+# Exchange Autodiscover SSRF/泄露
 /autodiscover/autodiscover\.json
-# -> ZDI 漏洞探测标识
-/@zdi/
-# -> PowerShell 接口探测
-/Powershell
-# -> 开发服务器元数据上传接口
-/developmentserver/metadatauploader
-# -> Spring Cloud Gateway 路由泄露
-/actuator/gateway/routes
-# -> Spring Cloud Gateway 刷新接口
-/actuator/gateway/refresh
-# -> Gateway 路由接口
-/api/v1/gateway/routes
-# -> WebLogic WS-UTC 配置漏洞
-/ws_utc/config\.do
-# -> WebLogic 控制台路径穿越
-/console/css/%252e
-# -> WebLogic async 反序列化
-/_async/AsyncResponseService
-# -> WebLogic wls-wsat 反序列化
-/wls-wsat/CoordinatorPortType
-# -> JBoss invoker 反序列化
-/invoker/readonly
-# -> JBoss WebServices 接口
-/jbossws/services
-# -> Axis2 管理后台
-/axis2/axis2-admin
-# -> Solr 管理接口
-/solr/admin/cores
-# -> 致远 OA htmlofficeservlet 漏洞
-/seeyon/htmlofficeservlet
-# -> 泛微 OA BshServlet 漏洞
-/weaver/bsh\.servlet\.BshServlet
-# -> UEditor 上传漏洞
-/ueditor/php/controller\.php
 
-# -> UEditor config.js 路径穿越/RCE 探测
-/ueditor/.*\.config\.js(/x\.php)?$
-# -> UEditor editor_config.js 探测
-/ueditor/.*editor_config\.js$
+# Spring Cloud Gateway
+^/actuator/gateway/routes$
+^/actuator/gateway/refresh$
+^/api/v1/gateway/routes$
+# Spring Cloud Gateway Code Injection (CVE-2022-22947)
+^/actuator/gateway/routes/.+$
 
-# -> UEditor/UMeditor config.js 路径穿越/RCE 探测（不限制目录层级）
-ueditor\.config\.js(/x\.php)?$
+# Spring Data REST SpEL RCE (CVE-2017-8046)
+^/users/\d+$
+# Spring Framework RCE via Data Binding (CVE-2022-22965) - signature in args
+# Spring Cloud Function SpEL RCE (CVE-2022-22963)
+^/functionRouter$
+# Spring Boot Actuator jolokia / logfile / env
+^/actuator/(jolokia|logfile|trace|dump|shutdown|restart|sessions|flyway|liquibase)$
+# Spring Boot whitelabel error page not a CVE but info leak
+^/error$
+
+# WebLogic
+^/ws_utc/config\.do$
+^/console/css/%252e
+^/_async/AsyncResponseService$
+^/wls-wsat/CoordinatorPortType$
+
+# JBoss
+^/invoker/readonly$
+^/jbossws/services
+
+# Axis2
+^/axis2/axis2-admin
+
+# Solr
+^/solr/admin/cores
+
+# 致远 OA
+^/seeyon/htmlofficeservlet
+
+# 泛微 OA
+^/weaver/bsh\.servlet\.BshServlet
+
+# UEditor
+^/ueditor/php/controller\.php
+^/ueditor/.*\.config\.js(?:/x\.php)?$
+^/ueditor/.*editor_config\.js$
+ueditor\.config\.js(?:/x\.php)?$
 umeditor\.config\.js$
 
-# -> WordPress wlwmanifest 探测（兼容双斜杠等变形）
-wlwmanifest\.xml$
-
-# -> WebUploader 上传预览接口探测
-/webuploader(/.*)?/server/preview\.php$
-# -> FCKeditor 文件管理器
+# WebUploader / FCKeditor / CKEditor / Plupload / KindEditor
+^/webuploader(?:/.*)?/server/preview\.php$
 /fckeditor/editor/filemanager
-# -> CKEditor 文件管理器
 /ckeditor/filemanager
-# -> Plupload 示例上传页
 /plupload/examples/upload\.php
-# -> KindEditor 上传漏洞
 /kindeditor/php/upload_json\.php
 
-# 危险文件扩展名 — 配置 / 密钥 / 数据库 / 压缩包 / PHP 备份
-# -> 敏感配置文件泄露
-\.(env|ini|conf|config|properties|yml|yaml)$
-# -> 密钥/证书文件泄露
-\.(pem|key|p12|pfx|jks|keystore|truststore|kdb|csr|der)$
-# -> Terraform 状态文件泄露
-\.(tf|tfvars|tfstate|tfstate\.backup)$
-# -> 压缩包文件泄露
-\.(7z|zip|rar|tar|tgz|tbz2|txz|gz|bz2|xz|lz|lzma|zst|br)$
-# -> 数据库/堆转储文件泄露
-\.(sql|sqlite|sqlite3|db|db3|mdb|accdb|dump|dmp|hprof|heapdump)$
-# -> PHP 源码/备份泄露
-\.(php\d+|php\.bak|php~)$
+# Jenkins
+^/jenkins(?:/.*)?$
+^/script$
+^/scriptText$
+^/job/.*/build$
+^/asynchPeople$
+^/securityRealm/user/admin/search/index
 
-# 敏感文件模式 — SSH 密钥
-# -> SSH 密钥文件泄露
-(id_(rsa|dsa|ecdsa|ed25519)|authorized_keys|known_hosts)$
+# GitLab
+^/explore$
+^/api/v4/users$
+^/.git/config$
 
-# 敏感文件模式 — 凭证 / 密钥
-# -> 应用凭证/密钥文件泄露
-(credentials|secrets?|service-account|firebase|google-services|aws-exports)\.(json|ya?ml|toml|ini|conf|cnf|properties|xml|txt)$
+# Confluence / Jira
+^/confluence(?:/.*)?$
+^/wiki(?:/.*)?$
+^/secure/ViewUserInfo\.(?:jsp|action)$
+^/rest/api/2/user
 
-# 敏感文件模式 — 配置文件
-# -> 应用配置文件泄露
-(application|bootstrap|settings|config|local|production|prod|staging|stage|development|dev|test|database|db)\.(json|ya?ml|toml|ini|conf|cnf|properties|xml)$
+# Elasticsearch / Kibana
+^/(?:_cluster|_nodes|_cat|_aliases|_search|_mapping|_snapshot)(?:/.*)?$
+^/app/kibana(?:/.*)?$
+^/api/console/proxy(?:/.*)?$
 
-# 敏感文件模式 — 构建依赖
-# -> 构建依赖/锁文件泄露
-(composer\.(json|lock)|package(-lock)?\.json|npm-shrinkwrap\.json|yarn\.lock|pnpm-lock\.ya?ml|bun\.lockb?|bower\.json|Gemfile(\.lock)?|go\.(mod|sum|work)|Cargo\.(toml|lock)|pom\.xml|build\.gradle(\.kts)?|settings\.gradle(\.kts)?|gradle\.properties|mvnw|gradlew|Makefile|CMakeLists\.txt|requirements(-[A-Za-z0-9_.-]+)?\.txt|Pipfile(\.lock)?|pyproject\.toml|poetry\.lock|setup\.(py|cfg)|tox\.ini|pytest\.ini|phpunit\.xml(\.dist)?|artisan|manage\.py|wsgi\.py|asgi\.py|celery\.py)$
+# Grafana
+^/api/datasources(?:/.*)?$
+^/api/admin(?:/.*)?$
+^/metrics$
 
-# 敏感文件模式 — Docker / CI / 进程
-# -> Docker/CI/进程配置文件泄露
-(Dockerfile(\.[^/]+)?|Containerfile(\.[^/]+)?|\.dockerignore|docker-compose(\.[^/]+)?\.ya?ml|compose(\.[^/]+)?\.ya?ml|Jenkinsfile|Vagrantfile|Procfile|supervisord\.conf|ecosystem\.config\.(js|cjs|mjs|json)|pm2(\.config)?\.(js|json|ya?ml))$
+# Apache Airflow
+^/api/v1/dags(?:/.*)?$
+^/admin(?:/.*)?$
 
-# 敏感文件模式 — K8s / Helm / Ansible
-# -> K8s/Helm/Ansible 配置泄露
-(Chart\.ya?ml|values(-[A-Za-z0-9_.-]+)?\.ya?ml|kustomization\.ya?ml|helmfile\.ya?ml|ansible\.cfg|inventory(\.ini)?|playbook\.ya?ml)$
+# Apache Spark
+^/jobs(?:/.*)?$
+^/app/history(?:/.*)?$
 
-# 敏感文件模式 — core dump
-# -> Core dump 文件泄露
-(core|core\.[0-9]+)$
+# Harbor
+^/api/v2\.0/users$
+^/harbor/sign-in
 
-# 敏感文件模式 — direnv / shell 环境配置（LeakIX 等扫描器常探测 .envrc.local）
-# -> direnv 环境配置泄露
-\.envrc(\.[a-zA-Z0-9_-]+)*$
+# ArgoCD
+^/api/v1/session$
+^/applications(?:/.*)?$
 
-# 依赖目录
-# -> PHP 依赖目录泄露
-/(composer\.(json|lock)|vendor/)
-# -> Node.js 依赖锁文件泄露
-/(package\.json|package-lock\.json|yarn\.lock|pnpm-lock\.yaml)$
-# -> node_modules 目录泄露
-^/(node_modules)(/.*)?$
+# RabbitMQ Management
+^/api/(?:whoami|overview|connections|channels|exchanges|queues|bindings)(?:/.*)?$
 
-# 系统 shell 执行（路径穿越/命令注入常用目标）
-# -> 系统 shell 路径：bash
-/bin/(ba)?sh
-# -> 系统 shell 路径：dash
-/bin/dash
-# -> 系统 shell 路径：zsh
-/bin/zsh
-# -> 系统 shell 路径：csh
-/bin/csh
-# -> 系统 shell 路径：ksh
-/bin/ksh
+# RedisInsight / phpMyAdmin / Adminer
+^/redisinsight(?:/.*)?$
+^/phpmyadmin(?:/.*)?$
+^/adminer(?:\.php)?$
 
-# 常见路径穿越敏感目标（LFI / RCE 探测）
-# -> LFI 敏感目标：/etc/passwd
-/etc/passwd
-# -> LFI 敏感目标：/etc/shadow
-/etc/shadow
-# -> LFI 敏感目标：/etc/hosts
-/etc/hosts
-# -> LFI 敏感目标：/proc/self
-/proc/self/
-# -> Windows 敏感文件 win.ini
-/win\.ini
-# -> Windows 系统目录探测
+# PowerShell 接口探测（加路径边界）
+^/(?:.*/)?[Pp]ower[s]?hell(?:\.exe)?(?:[/?#]|$)
+
+# Trend Micro OfficeScan
+^/officescan/console/cgi/cgiChkMasterPwd\.exe$
+^/officescan/console(?:/.*)?$
+
+# GeoServer
+^/geoserver(?:/web|/index\.html)?(?:/.*)?$
+
+# 依赖目录（源码泄露）
+^/(?:node_modules|vendor)(?:/.*)?$
+
+# 环境变量 / 凭证文件（精确模式）
+\.env(?:\.[a-zA-Z0-9_-]+)?$
+\.env\..*\.(?:php|bak|backup|old|orig|save)$
+\.git-credentials$
+\.gitconfig$
+\.git/
+\.envrc(?:\.[a-zA-Z0-9_-]+)*$
+
+# SSH 密钥
+(?:^|/)(id_(?:rsa|dsa|ecdsa|ed25519)|authorized_keys|known_hosts)$
+
+# Core dump
+(?:^|/)(?:core|core\.[0-9]+)$
+
+# 系统 shell 路径（路径穿越/命令注入目标）
+^/bin/(?:ba)?sh(?:[/?#]|$)
+^/bin/dash(?:[/?#]|$)
+^/bin/zsh(?:[/?#]|$)
+^/bin/csh(?:[/?#]|$)
+^/bin/ksh(?:[/?#]|$)
+
+# LFI 敏感目标
+/(?:etc/passwd|etc/shadow|proc/self/)(?:[?#]|$)
 /windows/system32/
-# -> Windows 命令执行：cmd.exe
 cmd\.exe
-# -> Windows 命令执行：powershell.exe
 powershell\.exe
-# -> Windows 子系统 bash.exe
 bash\.exe
 
-# 常见 WebShell / 命令执行文件名
-# -> 常见 WebShell/命令执行文件名
-(webshell|c99|r57|china|fx29|shell|cmd|exec|eval|upload|manager)\.((php|jsp|asp|aspx|cgi|pl|sh|py)(\d?))
-
-# Trend Micro OfficeScan / Apex One 历史漏洞探测
-# -> OfficeScan 控制台密码验证 CGI
-/officescan/console/cgi/cgiChkMasterPwd\.exe
-# -> OfficeScan 控制台静态资源路径
-^/officescan/console(/.*)?$
-
 # [java]
-# -> Java Druid 监控后台
-^/druid(/.*)?$
-# -> H2 数据库控制台
-^/h2-console(/.*)?$
-# -> Jolokia JMX 代理
-^/jolokia(/.*)?$
-# -> Spring Boot Admin
-^/sba(/.*)?$
-# -> Spring Boot 实例端点
-^/instances(/.*)?$
-# -> JavaMelody/通用监控入口
+# Java 技术栈敏感端点
+^/druid(?:/.*)?$
+^/h2-console(?:/.*)?$
+^/jolokia(?:/.*)?$
+^/sba(?:/.*)?$
+^/instances(?:/.*)?$
 ^/monitoring$
-# -> JavaMelody 监控
-^/javamelody(/.*)?$
+^/javamelody(?:/.*)?$
 
-# 环境变量 / 凭证文件（任意路径）
-# -> 环境变量文件泄露
-\.env(\.[a-zA-Z0-9_-]+)?$
-# -> 环境变量备份文件泄露
-\.env\..*\.(php|bak|backup|old|orig|save)$
-# -> Git 凭据文件泄露
-\.git-credentials
-# -> Git 配置文件泄露
-\.gitconfig
-# -> Git 目录泄露
-\.git/
+# Java 常见中间件/框架 CVE 路径
+# Apache Struts2 RCE (CVE-2017-5638 / CVE-2020-17530 / S2-045 / S2-061)
+\.action(?:[/?#]|$)
+\.do(?:[/?#]|$)
+# Apache Shiro (CVE-2016-4437) - rememberMe 反序列化，signature in cookie
+^/shiro$
+# Fastjson / Jackson 反序列化 - signatures in args/cookie
+# Apache Log4j JNDI (CVE-2021-44228) - signature in args/cookie
+# Oracle WebLogic - see core section
+# JBoss - see core section
+# Apache Solr - see core section
+# Apache Druid - see core section
 
 # [nodejs]
-# -> Webpack Dev Server
-^/__webpack_dev_server__(/.*)?$
-# -> NPM 调试日志目录
-^/npm-debug(/.*)?$
-# -> Yarn 错误日志目录
-^/yarn-error(/.*)?$
-# -> Next.js 配置文件泄露
-^/next\.config\.(js|mjs|ts)$
+^/__webpack_dev_server__(?:/.*)?$
+^/npm-debug(?:/.*)?$
+^/yarn-error(?:/.*)?$
+^/next\.config\.(?:js|mjs|ts)$
 
-# LLM / OpenAI API 接口探测
-# -> LLM API：模型列表
-^/v1/models$
-# -> LLM API：嵌入接口
-^/v1/embeddings$
-# -> LLM API：补全接口
-^/v1/completions$
-# -> LLM API：对话补全接口
-^/v1/chat/completions$
+# Node.js 调试接口（Node --inspect）
+^/json/list$
+^/json/version$
+^/json/activatebreak/
 
-# 通用版本/API 根路径探测
-# -> 版本接口探测
-^/version$
-# -> API v1 根路径探测
-^/v1$
-
-# GeoServer 管理后台探测
-# -> GeoServer 管理后台
-^/geoserver/web(/.*)?$
-^/geoserver(/index\.html)?$
+# Node.js 常见框架/应用后台
+# Strapi Admin
+^/admin(?:/.*)?$
+# Ghost Admin
+^/ghost(?:/.*)?$
+# Node-RED
+^/red(?:/.*)?$
+# PM2 Web Interface
+^/pm2(?:/.*)?$
+# Express status-monitor
+^/status-monitor(?:/.*)?$
+# Node.js 应用源码映射
+^/[^/]+\.js\.map$
+# NPM package.json / node_modules 已在 core 依赖目录规则覆盖
+# Express error page
+^/\\?__proto__
 
 # [php]
-
-# Laravel 调试/后台/文件管理器
-# -> Laravel Ignition 调试
-^/_ignition(/.*)?$
-# -> Laravel Telescope
-^/telescope(/.*)?$
-# -> Laravel Horizon
-^/horizon(/.*)?$
-# -> Laravel Nova
-^/nova(/.*)?$
-# -> Laravel Filament
-^/filament(/.*)?$
-# -> Laravel Backpack
-^/backpack(/.*)?$
-# -> Laravel 文件管理器
-^/laravel-filemanager(/.*)?$
-# -> 文件管理器入口
-^/filemanager(/.*)?$
-# -> Vendor 目录泄露
-^/vendor(/.*)?$
-# -> PHPUnit 配置文件泄露
-^/phpunit\.xml(\.dist)?$
-# -> PHP 用户配置文件泄露
+^/_ignition(?:/.*)?$
+^/telescope(?:/.*)?$
+^/horizon(?:/.*)?$
+^/nova(?:/.*)?$
+^/filament(?:/.*)?$
+^/backpack(?:/.*)?$
+^/laravel-filemanager(?:/.*)?$
+^/filemanager(?:/.*)?$
+^/vendor(?:/.*)?$
+^/phpunit\.xml(?:\.dist)?$
 ^/\.user\.ini$
-# -> Laravel 开发服务器入口
-^/server\.php$          # Laravel 开发入口，生产环境不应直接访问
+^/server\.php$
+^/thinkphp(?:/.*)?$
 
-# ThinkPHP
-# -> ThinkPHP 框架入口探测
-^/thinkphp(/.*)?$
-# -> WordPress 配置文件泄露
+# Laravel Ignition RCE (CVE-2021-3129)
+^/_ignition/execute-solution$
+
+# ThinkPHP RCE
+^/index\.php\?s=/index/\\\\think.*
+^/index\.php\?s=captcha$
+
+# WordPress
 ^/wp-config\.php$
-# -> WordPress 安装页
 ^/wp-admin/install\.php$
-# -> WordPress 配置设置页
 ^/wp-admin/setup-config\.php$
-# -> WordPress 修复页
 ^/wp-admin/maint/repair\.php$
-# -> WordPress 调试日志泄露
 ^/wp-content/debug\.log$
-# -> WordPress XML-RPC 接口
+^/wp-includes/wlwmanifest\.xml$
 ^/xmlrpc\.php$
-# -> WordPress REST API 用户枚举
-^/wp-json/wp/v2/users(/.*)?$
-# -> WordPress 配置备份文件泄露
-^/wp-config\.php\.(bak|backup|old|orig|save|swp|tmp|temp|dist|sample|example)$
+^/wp-json/wp/v2/users(?:/.*)?$
+^/wp-config\.php\.(?:bak|backup|old|orig|save|swp|tmp|temp|dist|sample|example)$
+# WordPress 常见插件漏洞路径
+^/wp-content/plugins/(?:wp-file-manager|site-import|gravityforms|revslider|mailpoet|woocommerce)/.*\.(?:php\d?|phtml)$
+
+# Drupal
+^/user/register$
+^/user/password$
+^/admin/config/people/accounts$
+
+# phpMyAdmin / Adminer
+^/phpmyadmin(?:/.*)?$
+^/adminer(?:\.php)?$
+
+# Magento / Adobe Commerce
+^/rest/V1/(?:integration/admin/token|integration/customer/token)$
+^/index\.php/rest/V1/(?:integration/admin/token|integration/customer/token)$
+
+# Joomla
+^/administrator/index\.php$
+^/administrator/components(?:/.*)?$
+
+# Dedecms / EmpireCMS / Discuz
+^/dede(?:/.*)?$
+^/e/admin(?:/.*)?$
+^/admin\.php\?action=plugins(?:&|$)
+^/uc_server(?:/.*)?$
+
+# Typecho
+^/admin/manage-pages\.php$
+
+# PHP 常见探针/后门
+^/tz\.php$
+^/l\.php$
+^/u\.php$
+^/shell\.php$
+
+# [python]
+# Python 技术栈敏感端点 / CVE
+
+# Django
+^/admin(?:/.*)?$
+^/django-admin(?:/.*)?$
+
+# Flask Debug Pin bypass / Werkzeug console
+^/console$
+^/__debugger__
+
+# FastAPI 文档接口（信息泄露）
+^/docs$
+^/redoc$
+^/openapi\.json$
+
+# Tornado / Web2py / Bottle
+^/admin/default/index$
+^/examples/\w+$
+
+# Supervisor / Celery / Flower
+^/supervisor(?:/.*)?$
+^/flower(?:/.*)?$
+^/celery-\w+(?:/.*)?$
+
+# [go]
+# Go 技术栈敏感端点 / CVE
+
+# Go pprof 性能分析接口
+^/debug/pprof(?:/.*)?$
+
+# 常见 Go 框架后台/调试
+# Gin / Echo / Beego / Revel / Iris
+^/admin(?:/.*)?$
+^/swagger(?:/.*)?$
+^/api/v1/swagger(?:/.*)?$
+
+# Go 应用源码/锁文件泄露
+^/go\.(?:mod|sum|work)(?:[/?#]|$)
+
+# [dotnet]
+# .NET / ASP.NET 技术栈敏感端点 / CVE
+
+# ASP.NET 经典调试/错误页
+^/trace\.axd$
+^/elmah\.axd$
+^/error\.aspx$
+
+# ASP.NET WebForms 资源处理程序
+^/WebResource\.axd$
+^/ScriptResource\.axd$
+
+# WCF / ASMX / WCF REST
+^/.*\.svc(?:/.*)?$
+^/.*\.asmx(?:/.*)?$
+
+# .NET Core / ASP.NET Core 通用路径
+^/\.well-known/(?:openid-configuration|jwks\.json)$
+^/identity/(?:account/(?:login|register|manage)|connect/token)(?:/.*)?$
+
+# [ruby]
+# Ruby / Rails 技术栈敏感端点 / CVE
+
+# Rails 后台 / 调试
+^/admin(?:/.*)?$
+^/active_admin(?:/.*)?$
+^/sidekiq(?:/.*)?$
+
+# Rails 控制台/路由/错误页
+^/rails/info/routes$
+^/rails/info/properties$
+^/rails/console$
+
+# Sinatra / Puma
+^/sinatra(?:/.*)?$
+
+# Ruby 源码/锁文件
+^/Gemfile(?:\.lock)?$
+^/config/database\.ya?ml$
+
+# [cloud]
+# 云原生 / Kubernetes / 容器平台敏感端点
+
+# Kubernetes API Server
+^/api/v1/(?:namespaces|pods|nodes|services|endpoints|configmaps|secrets|serviceaccounts)(?:/.*)?$
+^/apis/(?:apps|rbac|networking\.k8s\.io|extensions)/v1(?:beta1)?(?:/.*)?$
+
+# Kubernetes Dashboard
+^/api/v1/namespaces/kubernetes-dashboard(?:/.*)?$
+^/#!/pod(?:/.*)?$
+
+# etcd
+^/v2/keys(?:/.*)?$
+^/v3/auth(?:/.*)?$
+
+# Docker Registry
+^/v2/_catalog$
+^/v2/.*/manifests/.*$
+^/v2/.*/blobs/.*$
+
+# Harbor
+^/harbor/sign-in$
+^/api/v2\.0/users$
+^/api/v2\.0/projects(?:/.*)?$
+
+# Istio
+^/istio(?:/.*)?$
+
+# Prometheus / Grafana / Alertmanager
+^/prometheus(?:/.*)?$
+^/alertmanager(?:/.*)?$
+
+# HashiCorp Vault
+^/v1/auth(?:/.*)?$
+^/v1/sys(?:/.*)?$
+
+# HashiCorp Consul
+^/v1/agent(?:/.*)?$
+^/v1/catalog(?:/.*)?$
+^/v1/kv(?:/.*)?$
+^/v1/acl(?:/.*)?$
+
+# HashiCorp Nomad
+^/v1/agent(?:/.*)?$
+^/v1/jobs(?:/.*)?$
+
+# Rancher
+^/v3(?:/.*)?$
+^/k8s/clusters(?:/.*)?$
+
+# Portainer
+^/api/endpoints(?:/.*)?$
+^/api/auth(?:/.*)?$
+
+# AWX / Ansible Tower
+^/api/v2/(?:jobs|job_templates|credentials|inventories|projects|organizations|users)(?:/.*)?$
+
+# [database]
+# 数据库管理后台 / 监控 / CVE
+
+# MySQL
+^/phpmyadmin(?:/.*)?$
+^/phpMyAdmin(?:/.*)?$
+^/mysqladmin(?:/.*)?$
+^/pma(?:/.*)?$
+
+# PostgreSQL
+^/phpPgAdmin(?:/.*)?$
+^/pgadmin(?:/.*)?$
+
+# Redis
+^/redis(?:/.*)?$
+^/redisinsight(?:/.*)?$
+^/redis-commander(?:/.*)?$
+^/redmin(?:/.*)?$
+
+# MongoDB
+^/mongo-express(?:/.*)?$
+^/mongoexpress(?:/.*)?$
+^/robomongo(?:/.*)?$
+^/mongodbops(?:/.*)?$
+
+# Elasticsearch / Kibana / Logstash
+^/elasticsearch(?:/.*)?$
+^/kibana(?:/.*)?$
+^/logstash(?:/.*)?$
+^/_cat(?:/.*)?$
+^/_cluster(?:/.*)?$
+^/_nodes(?:/.*)?$
+
+# ClickHouse
+^/play(?:/.*)?$
+^/clickhouse(?:/.*)?$
+
+# InfluxDB
+^/influxdb(?:/.*)?$
+
+# TiDB
+^/dashboard(?:/.*)?$
+
+# CockroachDB
+^/_admin(?:/.*)?$
+
+# Neo4j
+^/browser(?:/.*)?$
+^/neo4j(?:/.*)?$
+
+# Cassandra
+^/cassandra(?:/.*)?$
+
+# Couchbase
+^/couchbase(?:/.*)?$
+
+# [middleware]
+# 消息队列 / 注册中心 / 网关 / 代理 / 缓存 管理后台
+
+# Kafka
+^/kafka(?:/.*)?$
+^/kafka-manager(?:/.*)?$
+^/kafka-ui(?:/.*)?$
+^/akhq(?:/.*)?$
+^/kafdrop(?:/.*)?$
+^/confluent(?:/.*)?$
+^/c3(?:/.*)?$
+
+# RocketMQ
+^/rocketmq(?:/.*)?$
+^/rocketmq-console(?:/.*)?$
+
+# Pulsar
+^/pulsar(?:/.*)?$
+^/pulsar-manager(?:/.*)?$
+
+# Nacos
+^/nacos(?:/.*)?$
+
+# Apollo
+^/apollo(?:/.*)?$
+^/config(?:/.*)?$
+^/portal(?:/.*)?$
+
+# ZooKeeper
+^/zookeeper(?:/.*)?$
+^/exhibitor(?:/.*)?$
+
+# ActiveMQ
+^/activemq(?:/.*)?$
+^/admin/(?:queues|topics|subscribers)(?:/.*)?$
+
+# EMQ X / MQTT
+^/emqx(?:/.*)?$
+^/mqtt(?:/.*)?$
+
+# NATS
+^/nats(?:/.*)?$
+
+# Traefik
+^/traefik(?:/.*)?$
+^/api/providers(?:/.*)?$
+
+# Envoy
+^/envoy(?:/.*)?$
+
+# Nginx 管理 UI
+^/nginx-ui(?:/.*)?$
+
+# HAProxy
+^/haproxy(?:/.*)?$
+^/stats(?:/.*)?$
+
+# Memcached
+^/memcached(?:/.*)?$
+
+# MinIO
+^/minio(?:/.*)?$
+^/minio-admin(?:/.*)?$
 
 # [aggressive]
+# 高误伤规则，按需开启
 
 # 所有 Actuator（含 health，K8s 探针会失效）
-# -> 激进模式：所有 Actuator 端点
-^/actuator(/.*)?$
+^/actuator(?:/.*)?$
 
-# 极度宽泛的 debug 匹配（误伤 /api/debug-mode 等正常路径）
-# -> 激进模式：宽泛 debug 路径匹配
+# 极度宽泛的 debug 匹配
 ^/.*debug.*/.*$
 
-# 系统功能 / 健康检查（K8s liveness/readiness 常用）
-# -> 激进模式：系统功能接口
+# 系统功能 / 健康检查
 ^/system-features$
-# -> 激进模式：健康检查接口
 ^/health$
-# -> 激进模式：K8s healthz
 ^/healthz$
-# -> 激进模式：K8s livez
 ^/livez$
-# -> 激进模式：K8s readyz
 ^/readyz$
-# -> 激进模式：K8s startupz
 ^/startupz$
 
-# 状态 / Metrics（Prometheus 监控常用）
-# -> 激进模式：状态接口
+# 状态 / Metrics
 ^/status$
-# -> 激进模式：Metrics 接口
-^/metrics(/.*)?$
-# -> 激进模式：Prometheus 接口
+^/metrics(?:/.*)?$
 ^/prometheus$
 
-# 根路径敏感/调试目录（test 太常见，易误伤）
-# -> 激进模式：调试/测试/临时目录
-^/(backup|backups|test|tests|debug|tmp|temp|logs|dev|staging|sandbox)(/.*)?$
+# 根路径敏感/调试目录
+^/(?:backup|backups|test|tests|debug|tmp|temp|logs|dev|staging|sandbox)(?:/.*)?$
 
-# 所有非 robots.txt 的 txt（误伤 /license.txt /changelog.txt 等）
-# -> 激进模式：除 robots.txt 外的 txt 文件
+# 所有非 robots.txt 的 txt
 /(?!robots).*\.txt$
 
-# 脚本 / 源码 / SourceMap 扩展名（技术类/代码分享站点会误伤）
-# -> 激进模式：Java 源码/字节码文件
-\.(java|class|jar|war)$
-# -> 激进模式：Python 源码/字节码
-\.(py|pyc|pyo)$
-# -> 激进模式：Shell 脚本
-\.(sh|bash|zsh|ksh|csh)$
-# -> 激进模式：SourceMap 文件
-\.map$
+# 通用版本/API 根路径探测
+^/version$
+^/v1$
+^/api$
 
-# 日志扩展名（若业务提供日志下载会误伤）
-# -> 激进模式：日志文件
-\.(log|trace|out|err)$
+# 常见 phpinfo/测试页面（业务中可能合法）
+^/i\.php$
+^/env\.php$
+^/init\.php$
+^/test\.php$
 
-# 备份 / 临时 / 示例扩展名（.dist / .sample 常用于配置示例）
-# -> 激进模式：备份/临时文件
-.*(~|\.bak|\.backup|\.old|\.orig|\.save|\.swp|\.swo|\.tmp|\.temp|\.copy|\.disabled|\.dist|\.sample|\.example)$
+# 通用后台入口（误伤高）
+^/apps/admin(?:/.*)?$
+^/app/install(?:/.*)?$
+^/install/controller(?:/.*)?$
+^/public/static/admin(?:/.*)?$
+^/static/upload/image/.*\.(?:php\d?|jsp|asp|aspx|sh|py|pl)$
+^/admin/controller(?:/.*)?$
+^/admin/reports(?:/.*)?$
 
-# 备份目录（old 目录太常见，如 /products/old/）
-# -> 激进模式：备份目录
-(^|/)(backup|backups|bak|dump|dumps|old)([._-]?[0-9]{4}[0-9._-]*)?(/|$)
+# 常见 WebShell/命令执行文件名（无扩展名限制，误伤高）
+/(?:^|/)(?:webshell|c99|r57|china|fx29|shell|cmd|exec|eval|upload|manager)\.(?:php|jsp|asp|aspx|cgi|pl|sh|py)(?:\d?)(?:[/?#]|$)
 
-# URI 路径 SQL 注入探测（攻击者把 payload 直接写在路径里绕过 args 检测）
-# -> URI 路径 SQL 注入
-(EXTRACTVALUE|EXTRACT_VALUE|UPDATEXML|/\*!50000|SLEEP\s*\(|BENCHMARK\s*\(|INTO\s+(OUT|DUMP)FILE|information_schema)
+# 脚本 / 源码 / SourceMap 扩展名
+\.(?:java|class|jar|war|py|pyc|pyo|sh|bash|zsh|ksh|csh|map)$
+
+# 日志扩展名
+\.(?:log|trace|out|err)$
+
+# 通用压缩包（业务下载场景易误伤）
+\.(?:7z|zip|rar|tar|tgz|tbz2|txz|gz|bz2|xz|lz|lzma|zst|br)$
+
+# 数据库/堆转储文件
+\.(?:sql|sqlite|sqlite3|db|db3|mdb|accdb|dump|dmp|hprof|heapdump)$
+
+# 通用源码/备份/临时扩展名
+(?:^|/)[^/]*(?:~|\.bak|\.backup|\.old|\.orig|\.save|\.swp|\.swo|\.tmp|\.temp|\.copy|\.disabled|\.dist|\.sample|\.example)$
+
+# 备份目录
+(^|/)(?:backup|backups|bak|dump|dumps|old)(?:[._-]?[0-9]{4}[0-9._-]*)?(/|$)
+
+# 通用配置文件模式（前端 SPA/API 文档易误伤）
+\.(?:ini|conf|config|properties|yml|yaml)(?:[/?#]|$)
+(credentials|secrets?|service-account|firebase|google-services|aws-exports)\.(?:json|ya?ml|toml|ini|conf|cnf|properties|xml|txt)$
+(application|bootstrap|settings|config|local|production|prod|staging|stage|development|dev|test|database|db)\.(?:json|ya?ml|toml|ini|conf|cnf|properties|xml)$
+
+# 构建依赖/锁文件
+(?:^|/)(?:composer\.(?:json|lock)|package(?:-lock)?\.json|yarn\.lock|pnpm-lock\.ya?ml|bun\.lockb?|bower\.json|Gemfile(?:\.lock)?|go\.(?:mod|sum|work)|Cargo\.(?:toml|lock)|pom\.xml|build\.gradle(?:\.kts)?|settings\.gradle(?:\.kts)?|gradle\.properties|mvnw|gradlew|Makefile|CMakeLists\.txt|requirements(?:-[A-Za-z0-9_.-]+)?\.txt|Pipfile(?:\.lock)?|pyproject\.toml|poetry\.lock|setup\.(?:py|cfg)|tox\.ini|pytest\.ini|phpunit\.xml(?:\.dist)?|artisan|manage\.py|wsgi\.py|asgi\.py|celery\.py)(?:[/?#]|$)
+
+# Docker / CI / 进程配置
+(?:^|/)(?:Dockerfile(?:\.[^/]+)?|Containerfile(?:\.[^/]+)?|\.dockerignore|docker-compose(?:\.[^/]+)?\.ya?ml|compose(?:\.[^/]+)?\.ya?ml|Jenkinsfile|Vagrantfile|Procfile|supervisord\.conf|ecosystem\.config\.(?:js|cjs|mjs|json)|pm2(?:\.config)?\.(?:js|json|ya?ml))(?:[/?#]|$)
+
+# K8s / Helm / Ansible
+(?:^|/)(?:Chart\.ya?ml|values(?:-[A-Za-z0-9_.-]+)?\.ya?ml|kustomization\.ya?ml|helmfile\.ya?ml|ansible\.cfg|inventory(?:\.ini)?|playbook\.ya?ml)(?:[/?#]|$)
+
+# URI 路径 SQL 注入探测
+(EXTRACTVALUE|EXTRACT_VALUE|UPDATEXML|/\*!\d{5}|SLEEP\s*\(|BENCHMARK\s*\(|INTO\s+(OUT|DUMP)FILE|information_schema)

@@ -1,12 +1,11 @@
-# 业务路径白名单示例
-^/123/$
-# 业务接口白名单
-^/userAction/saveUserActionData
-# 业务路径白名单
-^/drt-case
-# 控制台 API 白名单
-^/console/api/apps/*
-# 文件上传接口白名单
-^/files/upload/*
-# ACME 证书验证标准路径白名单
-^/\.well-known(/.*)?$
+# URL 白名单
+# 匹配 ngx.var.uri（不含查询参数）
+# 注意：正则中 * 只作用于前驱字符，要放行子路径请用 (?:/.*)?$
+
+# ACME 证书验证标准路径
+^/\.well-known(?:/.*)?$
+
+# 常见静态资源
+^/favicon\.ico$
+^/robots\.txt$
+^/sitemap\.xml$

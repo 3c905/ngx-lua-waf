@@ -1,59 +1,42 @@
 # [core]
 
-# 代理伪造 / IP 欺骗（攻击者伪造代理头绕过 IP 限制）
-# 代理伪造：检测 X-Forwarded-Host
-^X-Forwarded-Host:
-# 代理伪造：检测 X-Real-IP
-^X-Real-IP:
-# 代理伪造：检测 X-Originating-IP
-^X-Originating-IP:
-# 代理伪造：检测 X-Remote-IP
-^X-Remote-IP:
-# 代理伪造：检测 X-Remote-Addr
-^X-Remote-Addr:
-# 代理伪造：检测 True-Client-IP
-^True-Client-IP:
-# 代理伪造：检测 Client-IP
-^Client-IP:
-# IP 欺骗：X-Forwarded-For 含内网 IP
-^X-Forwarded-For:.*(127\.0\.0\.1|0\.0\.0\.0|10\.\d{1,3}\.\d{1,3}\.\d{1,3}|172\.(1[6-9]|2\d|3[01])\.\d{1,3}\.\d{1,3}|192\.168\.\d{1,3}\.\d{1,3})
+# 注意：以下规则匹配 "HeaderName: HeaderValue" 完整字符串
+# 默认不建议按头名直接封禁 X-Forwarded-* / X-Real-IP 等代理头，
+# 这些头在 CDN/SLB/反向代理场景必然存在，应在 config.lua 中通过 TrustedProxies 管理信任链。
 
-# HTTP 请求走私
-# HTTP 请求走私：检测 Transfer-Encoding
-^Transfer-Encoding:
+# HTTP 请求走私：Content-Length 与 Transfer-Encoding 同时存在
+^(?:Content-Length:.+\n.*Transfer-Encoding|Transfer-Encoding:.+\n.*Content-Length):
 
-# Header 注入攻击（SQLi / XSS 载荷植入 Header）
-# Header 注入：检测 sleep 函数
-sleep\(
-# Header 注入：检测 benchmark 函数
-benchmark\(
-# Header 注入：检测 union select
-union\s+select
-# Header 注入：检测 drop table
-drop\s+table
-# Header 注入：检测 script 标签
-<script
-# Header 注入：检测 javascript 伪协议
+# 请求走私：Transfer-Encoding 值混淆
+^Transfer-Encoding:\s*(chunk\s*ed|chu[nk]ked|\\x0[9a]chunked|identity)
+
+# Header 注入攻击（限定高危载荷，带词边界减少误伤）
+# SQL 时间盲注
+\b(sleep|benchmark|pg_sleep|waitfor)\s*\(
+# SQL 联合查询
+\bunion\s+select\b
+# SQL 删表
+\bdrop\s+table\b
+# XSS script 标签
+<\s*script\b
+# XSS javascript 伪协议
 javascript:
-# Header 注入：检测 JNDI 载荷
+# JNDI / Log4Shell
 \$\{jndi:
 
-# DoS / 超大请求
-# DoS：检测异常大 Content-Length
-^Content-Length:\s*(9\d{8}|\d{10,})
+# DoS / 超大请求：Content-Length > 10MB
+^Content-Length:\s*(?:[1-9]\d{7,}|\d{10,})
 
 # CRLF 注入（Header 值中包含换行符）
-# CRLF 注入：检测换行符
-\n
-# CRLF 注入：检测回车符
-\r
+[\r\n]
 
 # [aggressive]
 
-# 所有 X-Forwarded-* 头（激进模式：正常反向代理场景会误伤）
-# 激进模式：拦截所有 X-Forwarded-* 头
+# 激进模式：所有 X-Forwarded-* 头（正常反向代理场景会误伤）
 ^X-Forwarded-
 
-# 所有自定义 IP 头（激进模式）
-# 激进模式：拦截所有 X-*-IP 头
+# 激进模式：所有自定义 IP 头
 ^X-.*-IP:
+
+# 激进模式：X-Forwarded-For 含内网 IP（内网入口/SLB 后易误伤）
+^X-Forwarded-For:.*(127\.0\.0\.1|0\.0\.0\.0|10\.\d{1,3}\.\d{1,3}\.\d{1,3}|172\.(1[6-9]|2\d|3[01])\.\d{1,3}\.\d{1,3}|192\.168\.\d{1,3}\.\d{1,3})

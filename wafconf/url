@@ -1,27 +1,29 @@
+# URL 黑名单：精确命中已知恶意路径/文件，避免误伤正常业务
+# 匹配对象为 ngx.var.request_uri，建议每条规则都考虑查询参数和路径边界
+
 # 敏感文件泄露：版本控制/配置/隐藏文件
-\.(git|svn|htaccess|bash_history|git_combo.debug.js|_combo.js|composer-auth.json|coveralls.yml|dot|ds_store|editorconfig|empty|env|env.example|_flexible_css.debug.js|_flexible_css.js|_flexible.debug.js|_flexible.js|gitattributes|gitignore|gitkeep|gush.yml|_makegrid.debug.js|_makegrid.js|mno|_package.json|php_cs|php_cs.dist|project|psysh.php|scrutinizer.yml|stickler.yml|styleci.yml|travis.install.sh|travis.yml|unknownextension)
-# 备份/源码/数据库文件泄露
-\.(bak|inc|old|mdb|sql|backup|java|class)$
-# 备份压缩包泄露探测
-(vhost|bbs|host|wwwroot|www|site|root|hytop|flashfxp).*\.rar
-# 管理后台/控制台探测
-(phpmyadmin|jmx-console|jmxinvokerservlet)
+\.(git|svn|htaccess|bash_history|git_combo\.debug\.js|_combo\.js|composer-auth\.json|coveralls\.yml|dot|ds_store|editorconfig|empty|env|env\.example|_flexible_css\.debug\.js|_flexible_css\.js|_flexible\.debug\.js|_flexible\.js|gitattributes|gitignore|gitkeep|gush\.yml|_makegrid\.debug\.js|_makegrid\.js|mno|_package\.json|php_cs|php_cs\.dist|project|psysh\.php|scrutinizer\.yml|stickler\.yml|styleci\.yml|travis\.install\.sh|travis\.yml|unknownextension)(?:[/?#]|$)
+
+# 备份/源码文件泄露
+\.(bak|inc|old|backup)(?:[/?#]|$)
+
+# 管理后台/控制台探测（限定为常见已知入口）
+(phpmyadmin|jmx-console|jmxinvokerservlet)(?:[/?#]|$)
+
 # 面板探测：xui/panel
-^/(xui|panel)(/.*)?$
+^/(xui|panel)(?:/.*)?$
+
 # 路由器面板探测：boaform
-^/boaform(/.*)?$
+^/boaform(?:/.*)?$
+
 # CGI-BIN 目录探测
-^/cgi-bin(/.*)?$
-# 特定应用路径探测：portal/redlion
-^/portal/redlion$
+^/cgi-bin(?:/.*)?$
+
 # 扫描器/漏洞探测路径
 ^/(Dr0v|aaa9|aab9)$
-# Java 注入特征（在 URL 中语义较弱，可审查）
-java\.lang
-# 上传目录脚本执行探测
-/(attachments|upimg|images|css|uploadfiles|html|uploads|templets|static|template|data|inc|forumdata|upload|includes|cache|avatar)/(\\w+).(php|jsp)
+
+# 上传目录脚本执行探测（修复原 \w+ 无效转义）
+^/(?:attachments|upimg|images|uploadfiles|html|uploads|templets|template|data|inc|forumdata|upload|includes|cache|avatar)/(\w+)\.(?:php\d?|jsp)$
 
 # SMB 协议探测 / 扫描拦截（如 EternalBlue、SMB 服务枚举）
-# SMB 协议探测/扫描
 (SMBr|SMB@|NT LM 0\.12)
-

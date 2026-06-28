@@ -1,160 +1,132 @@
-# SQL 注入：检测 union select 联合查询
-(?:(union(.*?)select))
-# SQL 注入：检测 having 子句 / 测试特征
-having|rongjitest
-# SQL 时间盲注：检测 sleep() 延时函数
-sleep\((\s*)(\d*)(\s*)\)
-# SQL 时间盲注：检测 benchmark() 函数
-benchmark\((.*)\,(.*)\)
-# PHP 代码执行：检测 base64_decode 调用
-base64_decode\(
-# SQL 注入：检测 information_schema 数据库查询
-(?:from\W+information_schema\W)
-# SQL 注入：检测数据库当前用户/数据库名/连接 ID 函数
-(?:(?:current_)user|database|schema|connection_id)\s*\(
-# LFI/路径穿越：检测 /etc/passwd 读取
-(?:etc\/\W*passwd)
-# SQL 写文件：检测 INTO DUMPFILE/OUTFILE
-into(\s+)+(?:dump|out)file\s*
-# SQL 注入：检测 group by 子句
-group\s+by.+\(
-# PHP 危险函数执行：检测 PHP 高危函数调用
-(?:define|eval|file_get_contents|include|require|require_once|shell_exec|phpinfo|system|passthru|preg_\w+|execute|echo|print|print_r|var_dump|(fp)open|alert|showmodaldialog)\(
-# Struts2 漏洞：检测 xwork MethodAccessor 调用
-xwork\.MethodAccessor
-# SSRF/伪协议：检测危险 URL 协议
-(gopher|doc|php|glob|file|phar|zlib|ftp|ldap|dict|ogg|data)\:\/
-# Java 注入/反序列化：检测 java.lang 类引用
-java\.lang
-# PHP 全局变量：检测 $_GET/$_POST 等超全局变量访问
-\$_(GET|post|cookie|files|session|env|phplib|GLOBALS|SERVER)\[
-# XSS：检测 HTML 危险标签
-\<(iframe|script|body|img|layer|div|meta|style|base|object|input)
-# XSS：检测 HTML 事件处理器
-(onmouseover|onerror|onload)\=
+# POST 请求体攻击特征检测
+# 与 args 共用核心注入规则，但更注重 body 中常见的 payload 形态
 
-# Log4Shell / JNDI 注入 (CVE-2021-44228)
-# Log4Shell/JNDI 注入：检测 ${jndi:...} 载荷
-\$\{jndi:(ldap|dns|rmii|iiop|http|https|nis|corba|nds)
-
-# Spring4Shell (CVE-2022-22965)
-# Spring4Shell：检测 Spring classLoader 注入
-class\.module\.classLoader
-
-# XXE
-# XXE：检测 XML 外部实体声明
-<!ENTITY
-# XXE：检测带 SYSTEM 的 DOCTYPE
-<!DOCTYPE.*SYSTEM
-
-# NoSQL 注入
-# NoSQL 注入：检测 MongoDB $where 操作符
-\[\$where\]
-# NoSQL 注入：检测 MongoDB $ne 操作符
-"\$ne"
-# NoSQL 注入：检测 MongoDB $gt 操作符
-"\$gt"
-# NoSQL 注入：检测 MongoDB $regex 操作符
-"\$regex"
-
-# 命令注入 - 反引号与 $()
-# 命令注入：检测反引号执行
-`.*`
-# 命令注入：检测 $() 命令替换
-\$\(.*\)
-
-# SSRF 补充协议
-# SSRF：检测邮件/TFTP 协议外带请求
-(imap|smtp|pop3|tftp):\/
-
-# MySQL 注释绕过
-# MySQL 注释绕过：检测版本注释语法
-/\*!50000
-
-# JWT none 算法攻击
-"alg"\s*:\s*"none"
-
-# PHP 伪协议
-# PHP 伪协议：检测 php://filter 文件包含
-php://filter
-# PHP 伪协议：检测 php://input 代码执行
-php://input
-
-# ========== 现代 SQL 注入补充 ==========
-# SQL 时间盲注：检测 PostgreSQL pg_sleep
-pg_sleep\s*\(
-# SQL 时间盲注：检测 MSSQL waitfor delay
-waitfor\s+delay\s+
-# SQL 时间盲注：检测 Oracle dbms_pipe.receive_message
-dbms_pipe\.receive_message\s*\(
-# SQL 报错注入：检测 MySQL extractvalue
-extractvalue\s*\(
-# SQL 报错注入：检测 MySQL updatexml
-updatexml\s*\(
-# SQL 堆叠查询：检测分号后多语句
+# ========== SQL 注入 ==========
+(?<!\w)\bselect\b.+\bfrom\b(?!\w)
+(?<!\w)\bunion\s+(all\s+)?select\b(?!\w)
+(?<!\w)\binsert\s+into\b(?!\w)
+(?<!\w)\bdelete\s+from\b(?!\w)
+(?<!\w)\bupdate\s+.+\s+set\b(?!\w)
+(?<!\w)\bdrop\s+table\b(?!\w)
+(?<!\w)\binto\s+(outfile|dumpfile)\s+
+(?<!\w)load_file\s*\(
+(?<!\w)from\W+information_schema\W
+(?<!\w)sleep\s*\(\s*\d+\s*\)
+(?<!\w)benchmark\s*\(
+(?<!\w)pg_sleep\s*\(
+(?<!\w)extractvalue\s*\(
+(?<!\w)updatexml\s*\(
 ;\s*(drop|delete|insert|update|create|alter)\s+
-# SQL 写文件：检测 INTO OUTFILE/DUMPFILE
-into\s+(outfile|dumpfile)\s+
-# SQL 读文件：检测 LOAD_FILE
-load_file\s*\(
-# SQL 注入：检测十六进制拼接绕过
-0x[0-9a-fA-F]{10,}
 
-# ========== XSS 补充 ==========
-# XSS：检测 SVG on 事件载荷
-<svg\s+on\w+
-# XSS：检测 MathML on 事件载荷
-<math\s+on\w+
-# XSS：检测 iframe srcdoc 载荷
-<iframe\s+.*srcdoc
-# XSS/伪协议：检测 data:text/html;base64
-data:text/html;base64,
-# DOM XSS：检测 document 敏感操作
-document\.(cookie|write|location)
-# DOM XSS：检测 window 跳转/弹窗
-window\.(open|location)
+# ========== NoSQL 注入 ==========
+"\$(?:ne|gt|gte|lt|lte|nin|in|exists|or|and|expr|regex|where|geoNear|mapReduce)"
+\[\$where\]
 
-# ========== 命令注入 / OOB ==========
-# OOB/DNS 外带：检测外带域名
-\.(burpcollaborator\.net|interact\.sh|dnslog\.cn|ceye\.io|xip\.io|nip\.io)
-# 命令注入：检测 curl/wget 下载管道执行
-(curl|wget).*-O.*\|
-# 命令注入：检测管道到 shell 执行
-(curl|wget).*\|.*(bash|sh|cmd|powershell)
+# ========== 命令注入 ==========
+(?:^|[;|&\n])\s*(?:curl|wget)\s+[^|]+\|\s*(?:bash|sh|cmd|powershell|python|perl|ruby|lua)
+(?:^|[;|&\n])\s*(?:bash|sh|cmd|powershell)\s+-[ic]
+(?:^|[;|&\n])\s*(?:nc|ncat|netcat)\s+-[el].*?(?:bash|sh|cmd|powershell)
+(?<!\w)(?:eval|exec|system|shell_exec|passthru|proc_open|popen|pcntl_exec)\s*\(
+(?:^|[;|&\n])\s*`[^`]*`
+(?:^|[;|&\n])\s*\$\([^)]+\)
 
-# ========== 反序列化补充 ==========
-"@type"\s*:\s*"com\.sun\.
-# 反序列化：检测 java.lang.Runtime/ProcessBuilder
-"@type"\s*:\s*"java\.lang\.(Runtime|ProcessBuilder)
-# 反序列化：检测 Apache Commons 等危险类
-"@type"\s*:\s*"org\.apache\.(commons|ibatis|logging)
-# PHP 反序列化：检测 PHP 序列化字符串
+# ========== PHP 代码执行 / LFI ==========
+(?<!\w)(?:include|require|require_once|include_once)\s*\(
+(?<!\w)base64_decode\s*\(
+(?<!\w)phpinfo\s*\(
+php://filter
+php://input
+# PHP 危险函数（带上下文）
+(?<!\w)(?:assert|create_function|preg_replace)\s*\(
+\$_(?:GET|POST|REQUEST|COOKIE|FILES|SERVER)\[[^\]]+\]\s*\)\s*;
+
+# ========== SSRF / 伪协议 ==========
+(?<!\w)(?:file|gopher|dict|ldap|ftp|phar|glob|zlib|tftp|imap|smtp|pop3):/+[^\n]+
+(?:^|://)(?:169\.254\.169\.254|metadata\.google\.internal|metadata\.tencentyun\.com|100\.100\.100\.200|metadata\.aliyun\.com|instance-data)(?:[:/]|$)
+(?:^|://)(?:127\.0\.0\.1|0\.0\.0\.0|10\.\d{1,3}\.\d{1,3}\.\d{1,3}|172\.(1[6-9]|2\d|3[01])\.\d{1,3}\.\d{1,3}|192\.168\.\d{1,3}\.\d{1,3})(?:[:/]|$)
+\.(?:burpcollaborator\.net|interact\.sh|dnslog\.cn|ceye\.io|xip\.io|nip\.io|oastify\.com|requestbin\.com|xss\.ht|canarytokens\.com)
+
+# ========== XSS ==========
+<\s*(?:script|iframe|object|embed|base|form)\b
+(?:^|[^a-z0-9])(on\w+)\s*=
+<\s*(?:svg|math)\s+on\w+
+<\s*iframe\s+[^>]*srcdoc
+(?:^|[^a-z0-9])data:text/html[^;]*;base64,
+
+# ========== JNDI / Log4Shell ==========
+\$\{jndi:(?:ldap[s]?|dns|rmi|iiop|http|https|nis|corba|nds):[^}]*\}
+
+# ========== Spring4Shell ==========
+class\.module\.classLoader
+# Spring Cloud Function SpEL RCE (CVE-2022-22963)
+spring\.cloud\.function\.routing-expression
+spring\.cloud\.function\.definition
+
+# ========== XXE ==========
+<!ENTITY\s+[^>]+\s+SYSTEM\s+
+<!DOCTYPE\s+[^>]+\s+SYSTEM\s+
+<!DOCTYPE\s+[^>]+\[\s*<!ENTITY\s+\w+\s+SYSTEM\s+
+
+# ========== JWT 算法混淆 ==========
+"alg"\s*:\s*"none"
+"jwk"\s*:
+"x5c"\s*:
+"kid"\s*:\s*["']
+
+# ========== 反序列化 ==========
+"@type"\s*:\s*"(?:com\.sun|java\.lang\.(?:Runtime|ProcessBuilder)|org\.apache\.(?:commons|ibatis|logging)|org\.springframework|com\.mysql|ch\.qos\.logback)[^"]*"
 O:\d+:"[^"]+":\d+:\{
-# Java 反序列化：检测 Base64 Java 序列化魔术头
 rO0ABX
-# .NET 反序列化：检测 .NET 序列化魔术头
 AAEAAAD
 
-# ========== SSRF 内网 IP ==========
-# SSRF：检测内网 IP 地址
-(127\.0\.0\.1|0\.0\.0\.0|localhost|10\.\d{1,3}\.\d{1,3}\.\d{1,3}|172\.(1[6-9]|2\d|3[01])\.\d{1,3}\.\d{1,3}|192\.168\.\d{1,3}\.\d{1,3})
-
-# ========== 模板注入 (SSTI) ==========
-# SSTI：检测 ${...class...} 模板注入
-\$\{.*class.*\}
-# SSTI：检测 ${...runtime...} 模板注入
-\$\{.*runtime.*\}
-# SSTI：检测 ${...system...} 模板注入
-\$\{.*system.*\}
-# SSTI：检测 ${...process...} 模板注入
-\$\{.*process.*\}
-# SSTI：检测 Spring EL T() 调用
-\$\{.*T\(.*\)\}
-# SSTI：检测 #{...} 模板表达式
-\#\{.*\}
+# ========== SSTI ==========
+(?:\$\{|#\{)[^}]*(?:class|runtime|process|T\s*\(|invoke|exec|getRuntime)[^}]*\}
 
 # ========== 文件上传绕过 ==========
-# 文件上传绕过：检测双扩展名
-\.(php\d?|jsp|aspx|py|sh|pl|rb)\.(jpg|jpeg|png|gif|bmp|txt|pdf|doc|zip)
-# 图片马：检测 GIF 头伪装 PHP
+\.(?:php\d?|phtml|phar|jsp|jspx|aspx?|py|sh|pl|rb)\.(?:jpg|jpeg|png|gif|bmp|txt|pdf|doc|zip)
 GIF89a.*<\?php
+
+# ========== Struts2 ==========
+xwork\.MethodAccessor
+
+# Node.js / Python 代码执行与反序列化
+require\s*\(\s*['"]child_process['"]\s*\)
+\beval\s*\(\s*require\s*\(
+new\s+Function\s*\(\s*['"]return\s+process
+__import__\s*\(\s*['"]os['"]\s*\)
+\bos\.system\s*\(
+\bsubprocess\.(?:Popen|call|run)\s*\(
+\bpickle\.loads?\s*\(
+\byaml\.load\s*\(
+\beval\s*\(\s*compile\s*\(
+\bexec\s*\(\s*compile\s*\(
+
+# .NET / ASP.NET
+__VIEWSTATE
+__EVENTVALIDATION
+\.asax$
+\.cshtml$
+\.vbhtml$
+
+# Ruby / Rails
+<%.*%>
+\berb:\s*
+\bparams\[:\w+\]\s*=>
+authenticity_token
+
+# Go
+template\.Execute
+html/template
+
+# Cloud Native
+ eyJhbGciOiJSUzI1NiIsImtpZCI6
+"accountId"\s*:\s*"\d{12}"
+"instance-id"\s*:
+
+# Database / Middleware
+\b(?:FLUSHALL|FLUSHDB|CONFIG|SAVE|SHUTDOWN|DEBUG|KEYS)\s+
+LOAD\s+DATA\s+LOCAL\s+INFILE
+COPY\s+\w+\s+(?:TO|FROM)\s+PROGRAM
+\.runCommand\s*\(\s*\{\s*"?(?:hostInfo|listDatabases|getCmdLineOpts|shutdownServer)
+accessKey=\w+
+nacos\.core\.auth\.plugin\.nas\.

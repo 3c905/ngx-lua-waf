@@ -297,19 +297,30 @@ end
 -- 文件扩展名检查
 -- ============================================================
 
-function fileExtCheck(ext)
-    local items = Set(black_fileExt)
-    ext = string.lower(ext)
-    if ext then
-        for rule in pairs(items) do
-            if cache.match_cached(ext, rule, "isj") then
-                log('POST', ngx.var.request_uri, "-", "[FILEEXT][403] hit=[" .. ext .. "] rule=" .. rule)
-                if should_block("FileExtAction") then
-                    return say_html()
-                end
-                return true
-            end
+-- 预计算文件扩展名黑名单集合（避免每次请求重复构建）
+local file_ext_blacklist_set = nil
+local function get_file_ext_blacklist_set()
+    if not file_ext_blacklist_set then
+        file_ext_blacklist_set = {}
+        for _, l in ipairs(black_fileExt or {}) do
+            file_ext_blacklist_set[string.lower(l)] = true
         end
+    end
+    return file_ext_blacklist_set
+end
+
+function fileExtCheck(ext)
+    if not ext or ext == "" then
+        return false
+    end
+    ext = string.lower(ext)
+    local items = get_file_ext_blacklist_set()
+    if items[ext] then
+        log('POST', ngx.var.request_uri, "-", "[FILEEXT][403] hit=[" .. ext .. "]")
+        if should_block("FileExtAction") then
+            return say_html()
+        end
+        return true
     end
     return false
 end
@@ -561,7 +572,7 @@ function dangerous()
                 if not BlockAggressiveCheck and tag == "aggressive" then
                     -- 激进规则已关闭，跳过
                 elseif rule ~= "" then
-                    local m = ngx.re.match(ngx.var.request_uri, rule, "isj")
+                    local m = cache.match_cached(ngx.var.request_uri, rule, "isj")
                     if m then
                         local hit = string.sub(m[0] or "-", 1, 200)
                         log('GET', ngx.var.request_uri, "-", "[DANGEROUS][" .. tag .. "][404] hit=[" .. hit .. "] rule=" .. rule)
@@ -695,6 +706,7 @@ function response_filter()
                         local hit = string.sub(m[0] or "-", 1, 200)
                         log('GET', ngx.var.request_uri, "-", "[RESPONSE][500] hit=[" .. hit .. "] rule=" .. rule)
                         if should_block("ResponseAction") then
+                            ngx.status = ngx.HTTP_INTERNAL_SERVER_ERROR
                             ngx.arg[1] = "<html><body><h1>Internal Server Error</h1></body></html>"
                             ngx.arg[2] = true
                         end
@@ -724,6 +736,8 @@ function _G.waf_reload_rules()
     methodrules = read_rule('method')
     headerrules = read_rule('header')
     responserules = read_rule('response')
+    -- 刷新文件扩展名黑名单集合（config 可能已更新）
+    file_ext_blacklist_set = nil
     ngx.log(ngx.NOTICE, "WAF rules reloaded manually")
     return true
 end

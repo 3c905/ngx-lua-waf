@@ -44,15 +44,32 @@ function _M.set_ttl(ttl)
 end
 
 -- 校验并编译正则，返回编译后的 regex 对象或 nil
+-- 在 ngx.re.compile 不可用环境（如 resty CLI）回退到 ngx.re.match 校验
 local function compile_pattern(pattern, options)
     if not pattern or pattern == "" then
         return nil, "empty pattern"
     end
-    local ok, regex_or_err = pcall(ngx.re.compile, pattern, options or "isj")
-    if not ok then
-        return nil, tostring(regex_or_err)
+    options = options or "isj"
+
+    if ngx.re.compile then
+        local ok, regex_or_err = pcall(ngx.re.compile, pattern, options)
+        if not ok then
+            return nil, tostring(regex_or_err)
+        end
+        return regex_or_err
     end
-    return regex_or_err
+
+    -- 回退：用空串做一次 match 校验语法
+    local ok, err = pcall(ngx.re.match, "", pattern, options)
+    if not ok then
+        return nil, tostring(err)
+    end
+    -- 返回一个封装对象，复用 ngx.re.match
+    return {
+        match = function(self, text)
+            return ngx.re.match(text, pattern, options)
+        end
+    }
 end
 
 -- 检查缓存是否过期
@@ -190,7 +207,7 @@ function _M.match_cached(text, pattern, options)
         return regex:match(text)
     else
         regex_cache[cache_key] = { ok = false }
-        ngx.log(ngx.ERR, "WAF: regex compile failed: ", pattern, " error: ", err)
+        ngx.log(ngx.ERR, "WAF: regex compile failed: ", pattern, " error: ", err or "unknown")
         return nil
     end
 end
@@ -199,6 +216,11 @@ end
 function _M.reload_all()
     rule_cache = {}
     regex_cache = {}
+    -- 重置命中/未命中计数（累计规则数、非法规则数保留）
+    stats.cache_hits = 0
+    stats.cache_misses = 0
+    stats.regex_hits = 0
+    stats.regex_misses = 0
     ngx.log(ngx.NOTICE, "WAF: rules cache reloaded")
     return true
 end

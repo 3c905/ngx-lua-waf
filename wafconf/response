@@ -1,101 +1,57 @@
 # [core]
+# 响应阶段敏感信息泄露检测
+# 注意：响应体可能分片，跨 chunk 的匹配可能失败；建议配合 ResponseAction="log" 观察
 
 # Java 堆栈跟踪
-# Java 堆栈跟踪泄露
-java\.lang\.(NullPointerException|IllegalArgumentException|RuntimeException|Exception|Error)
-# Java 堆栈帧泄露
-at\s+(java|sun|org|com|net|io)\.[\w.]+\.[\w]+\(
+java\.lang\.(?:NullPointerException|IllegalArgumentException|RuntimeException|Exception|Error)
+at\s+(?:java|sun|org|com|net|io)\.[\w.]+\.[\w]+\(
 
 # Python 堆栈
-# Python 堆栈泄露
 Traceback\s+\(most\s+recent\s+call\s+last\)
-# Python 文件路径泄露
-File\s+\".+\",\s+line\s+\d+
+File\s+"[^"]+",\s+line\s+\d+
 
 # PHP 错误
-# PHP Fatal 错误泄露
 Fatal\s+error:
-# PHP Parse 错误泄露
 Parse\s+error:
-# PHP Warning 错误泄露
 Warning:\s+.*in\s+.*on\s+line\s+\d+
-# PHP Notice 错误泄露
 Notice:\s+.*in\s+.*on\s+line\s+\d+
 
 # .NET 错误
-# .NET 错误页泄露
-Server\s+Error\s+in\s+'\/'\s+Application
-# .NET 异常泄露
-System\.(NullReferenceException|ArgumentException|Web\.HttpException)
+Server\s+Error\s+in\s+'/'\s+Application
+System\.(?:NullReferenceException|ArgumentException|Web\.HttpException)
 
 # 数据库错误
-# Oracle 数据库错误泄露
 ORA-\d{5}
-# PDO/SQLSTATE 错误泄露
 SQLSTATE\[\w+\]
-# MySQL 错误泄露
 MySQL\s+server\s+has\s+gone\s+away
-# PostgreSQL 错误泄露
 PostgreSQL\s+query\s+failed
-# MongoDB 错误泄露
 MongoDB\s+Error
 
-# 内部路径泄露
-# 内部路径泄露：/home
-/home/\w+/
-# 内部路径泄露：/var/www
-/var/www/
-# 内部路径泄露：/usr/local
-/usr/local/\w+/
-# 内部路径泄露：/opt
-/opt/\w+/
-# 内部路径泄露：Windows C 盘
-C:\\\w+\\
-# 内部路径泄露：Windows D 盘
-D:\\\w+\\
-# 内部路径泄露：/etc
-/etc/\w+/
-# 内部路径泄露：/root
-/root/
+# 内部路径泄露（限定典型部署路径，避免命中文档）
+(?:^|[^a-zA-Z0-9_-])(?:/var/www/|/usr/local/\w+/|/opt/\w+/|/etc/\w+/|/root/)
+[CD]:\\\w+\\
 
 # 数据库连接串泄露
-# 数据库连接串泄露：MySQL JDBC
-jdbc:mysql://
-# 数据库连接串泄露：Oracle JDBC
-jdbc:oracle://
-# 数据库连接串泄露：PostgreSQL JDBC
-jdbc:postgresql://
-# 数据库连接串泄露：MongoDB
+jdbc:(?:mysql|oracle|postgresql|sqlserver|h2)://
 mongodb://
-# 数据库连接串泄露：Redis
 redis://
-# 数据库连接串泄露：MySQL
 mysql://
-# 数据库连接串泄露：PostgreSQL
 postgres://
 
 # 密钥 / Token 泄露
-# 私钥泄露
------BEGIN\s+(RSA\s+PRIVATE\s+KEY|PRIVATE\s+KEY|OPENSSH\s+PRIVATE\s+KEY)
-# 证书泄露
+-----BEGIN\s+(?:RSA\s+PRIVATE\s+KEY|PRIVATE\s+KEY|OPENSSH\s+PRIVATE\s+KEY)
 -----BEGIN\s+CERTIFICATE-----
-# OpenAI API Key 泄露
-sk-[a-zA-Z0-9]{48}
-# GitHub Personal Access Token 泄露
-ghp_[a-zA-Z0-9]{36}
-# GitHub PAT 泄露
-github_pat_[a-zA-Z0-9]{22}_[a-zA-Z0-9]{59}
+sk-[a-zA-Z0-9]{20,}
+ghp_[a-zA-Z0-9]{30,}
+github_pat_[a-zA-Z0-9]{20,}_[a-zA-Z0-9]{50,}
+gho_[a-zA-Z0-9]{30,}
+AKIA[0-9A-Z]{16}
+ASIA[0-9A-Z]{16}
 
 # 框架指纹 / 版本泄露
-# 框架指纹响应头泄露
-(X-Powered-By|X-AspNet-Version|X-Generator|Server):
-# Drupal 版本泄露
 Drupal\s+\d+\.\d+
-# WordPress 版本泄露
 WordPress\s+\d+\.\d+
-# Joomla 版本泄露
 Joomla!\s+\d+\.\d+
-# Laravel 版本泄露
 Laravel\s+\d+\.\d+
-# ThinkPHP 版本泄露
 ThinkPHP\s+\d+\.\d+
+Spring\s+Boot\s+\d+\.\d+

@@ -56,7 +56,9 @@ BlockMethod="on"
 BlockHeader="on"
 
 -- 响应阶段敏感信息泄露检测（错误堆栈、内部路径、密钥泄露）
+-- 注意：响应规则容易命中正常错误页，建议先以 log 模式运行观察
 BlockResponse="on"
+ResponseAction="log"
 
 -- ============================================================
 -- 【新增】增强功能配置
@@ -145,7 +147,7 @@ ArgsAction = "block"         -- GET 参数攻击
 CookieAction = "block"       -- Cookie 攻击
 PostAction = "block"         -- POST 参数攻击
 FileExtAction = "block"      -- 上传文件扩展名
-ResponseAction = "block"     -- 响应敏感信息泄露
+ResponseAction = "log"       -- 响应敏感信息泄露：建议先仅告警
 BodyLimitAction = "block"    -- 请求体大小限制（防 DoS）
 ScannerAction = "block"      -- 扫描器特征头（Acunetix/X-Scan）
 

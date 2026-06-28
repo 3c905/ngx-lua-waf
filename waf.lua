@@ -267,38 +267,127 @@ elseif check("args", args()) then
 elseif check("cookie", cookie()) then
     return
 elseif PostCheck then
-    if method == "POST" then
-        local boundary = get_boundary()
-        if boundary then
-            local len = string.len
-            local sock, err = ngx.req.socket()
-            if not sock then
-                waf_debug("WAF_POST_SOCK_FAIL: ip=", client_ip, " err=", tostring(err))
-                return
+    if method == "POST" or method == "PUT" or method == "PATCH" then
+        -- 辅助：从已读 body 中扫描文件扩展名
+        local function scan_multipart_body(body)
+            if not body or body == "" then return false end
+            for fname in string.gmatch(body, 'filename="([^"]+)"') do
+                local ext = string.match(fname, "%.([a-zA-Z0-9]+)$")
+                if ext and fileExtCheck(ext) then
+                    waf_debug("WAF_POST_FILEEXT_BLOCK: ip=", client_ip, " uri=", request_uri, " file=", fname)
+                    return true
+                end
             end
-            ngx.req.init_body(128 * 1024)
-            sock:settimeout(0)
+            return false
+        end
+
+        -- 辅助：兜底读取 body（内存或临时文件）用于扫描
+        local function get_body_for_scan()
+            ngx.req.read_body()
+            local body = ngx.req.get_body_data()
+            if body then return body end
+            local file_path = ngx.req.get_body_file()
+            if file_path then
+                local fd, open_err = io.open(file_path, "rb")
+                if fd then
+                    local data, read_err = fd:read(MAX_BODY_SIZE)
+                    fd:close()
+                    if data then return data end
+                    waf_debug("WAF_POST_FILE_READ_FAIL: ip=", client_ip, " err=", tostring(read_err))
+                else
+                    waf_debug("WAF_POST_FILE_OPEN_FAIL: ip=", client_ip, " err=", tostring(open_err))
+                end
+            end
+            return nil
+        end
+
+        local boundary = get_boundary()
+
+        if boundary then
+            -- ============================================================
+            -- multipart 文件上传：流式读取 + 重建 body
+            -- ============================================================
+            -- 关键：ngx.req.socket() 读取后必须自己 append_body() 重建，
+            -- 否则后端/proxy_pass 会收到空 body。
             local content_length = tonumber(ngx.req.get_headers()['content-length'])
             if not content_length then
                 waf_debug("WAF_POST_MULTIPART_NO_LENGTH: ip=", client_ip, " uri=", request_uri)
-                return
-            end
-            local chunk_size = 4096
-            if content_length < chunk_size then
-                chunk_size = content_length
-            end
-            local size = 0
-            while size < content_length do
-                local data, err, partial = sock:receive(chunk_size)
-                data = data or partial
-                if not data then
-                    waf_debug("WAF_POST_READ_FAIL: ip=", client_ip, " err=", tostring(err))
-                    return
+                -- 没有 Content-Length（通常是 chunked）直接降级到 read_body，
+                -- 避免 socket receive 因未知大小而阻塞
+                local body = get_body_for_scan()
+                if scan_multipart_body(body) then return end
+                waf_debug("WAF_POST_MULTIPART_PASS: ip=", client_ip, " uri=", request_uri, " mode=chunked_fallback")
+            elseif content_length > MAX_BODY_SIZE then
+                waf_debug("WAF_POST_MULTIPART_TOO_LARGE: ip=", client_ip, " uri=", request_uri, " size=", content_length)
+                log(method, request_uri, "-", "[BODYLIMIT][413] size=" .. tostring(content_length) .. " max=" .. tostring(MAX_BODY_SIZE))
+                if should_block and should_block("BodyLimitAction") then
+                    ngx.status = 413
+                    ngx.say("Request Entity Too Large")
+                    return ngx.exit(413)
                 end
-                size = size + len(data)
+            else
+                local sock, err = ngx.req.socket()
+                if not sock then
+                    waf_debug("WAF_POST_SOCK_FAIL: ip=", client_ip, " err=", tostring(err))
+                    -- socket 不可用，降级到 read_body 兜底
+                    local body = get_body_for_scan()
+                    if scan_multipart_body(body) then return end
+                else
+                    -- 初始化 body 缓冲区，准备重建请求体
+                    local init_ok, init_err = pcall(ngx.req.init_body, math.min(content_length, 128 * 1024))
+                    if not init_ok then
+                        waf_debug("WAF_POST_INIT_BODY_FAIL: ip=", client_ip, " err=", tostring(init_err))
+                        local body = get_body_for_scan()
+                        if scan_multipart_body(body) then return end
+                    else
+                        sock:settimeout(5000)  -- 5 秒读超时，避免空转
+                        local chunk_size = 4096
+                        if content_length < chunk_size then
+                            chunk_size = content_length
+                        end
+                        local size = 0
+                        local body_buffer = {}
+
+                        while size < content_length do
+                            local remain = content_length - size
+                            if remain < chunk_size then
+                                chunk_size = remain
+                            end
+                            local data, read_err, partial = sock:receive(chunk_size)
+                            data = data or partial
+                            if not data or data == "" then
+                                waf_debug("WAF_POST_READ_FAIL: ip=", client_ip, " err=", tostring(read_err), " size=", size)
+                                break
+                            end
+                            size = size + string.len(data)
+                            -- 重建请求体，确保后端能收到
+                            local append_ok, append_err = pcall(ngx.req.append_body, data)
+                            if not append_ok then
+                                waf_debug("WAF_POST_APPEND_FAIL: ip=", client_ip, " err=", tostring(append_err))
+                                break
+                            end
+                            -- 同时缓存到本地 buffer 做扩展名扫描
+                            table.insert(body_buffer, data)
+                        end
+
+                        local finish_ok, finish_err = pcall(ngx.req.finish_body)
+                        if not finish_ok then
+                            waf_debug("WAF_POST_FINISH_BODY_FAIL: ip=", client_ip, " err=", tostring(finish_err))
+                        end
+
+                        waf_debug("WAF_POST_MULTIPART_READ: ip=", client_ip, " uri=", request_uri, " size=", size)
+
+                        -- 文件扩展名黑名单检查
+                        local body = table.concat(body_buffer)
+                        if scan_multipart_body(body) then return end
+                    end
+                end
+                waf_debug("WAF_POST_MULTIPART_PASS: ip=", client_ip, " uri=", request_uri)
             end
-            waf_debug("WAF_POST_MULTIPART_PASS: ip=", client_ip, " uri=", request_uri, " size=", size)
         else
+            -- ============================================================
+            -- 非 multipart：安全地使用 read_body
+            -- ============================================================
             ngx.req.read_body()
             local args = ngx.req.get_post_args()
             if args then
@@ -323,6 +412,9 @@ elseif PostCheck then
                         for _, rule in pairs(postrules or {}) do
                             if rule ~= "" then
                                 local m = cache.match_cached(decoded, rule, "isj")
+                                if not m then
+                                    m = cache.match_cached(unescape(data), rule, "isj")
+                                end
                                 if m then
                                     log('POST', ngx.var.request_uri, "-", "[POST][403] hit=[" .. string.sub(m[0] or "-", 1, 200) .. "] rule=" .. rule)
                                     if should_block("PostAction") then

@@ -1,58 +1,37 @@
-# 路径穿越/变量注入：阻止 :$ 特殊序列
-\:\$
-# 模板/SSTI/变量注入：阻止 ${ 开头
-\$\{
-# SQL 注入：检测 select from/limit 语句
-select.+(from|limit)
-# SQL 注入：检测 union select 联合查询
-(?:(union(.*?)select))
-# SQL 注入：检测 having 子句 / 测试特征
-having|rongjitest
-# SQL 时间盲注：检测 sleep() 延时函数
-sleep\((\s*)(\d*)(\s*)\)
-# SQL 时间盲注：检测 benchmark() 函数
-benchmark\((.*)\,(.*)\)
-# PHP 代码执行：检测 base64_decode 调用
-base64_decode\(
-# SQL 注入：检测 information_schema 数据库查询
-(?:from\W+information_schema\W)
-# SQL 注入：检测数据库当前用户/数据库名/连接 ID 函数
-(?:(?:current_)user|database|schema|connection_id)\s*\(
-# LFI/路径穿越：检测 /etc/passwd 读取
-(?:etc\/\W*passwd)
-# SQL 写文件：检测 INTO DUMPFILE/OUTFILE
-into(\s+)+(?:dump|out)file\s*
-# SQL 注入：检测 group by 子句
-group\s+by.+\(
-# PHP 危险函数执行：检测 PHP 高危函数调用
-(?:define|eval|file_get_contents|include|require|require_once|shell_exec|phpinfo|system|passthru|preg_\w+|execute|echo|print|print_r|var_dump|(fp)open|alert|showmodaldialog)\(
-# Struts2 漏洞：检测 xwork MethodAccessor 调用
-xwork\.MethodAccessor
-# SSRF/伪协议：检测危险 URL 协议
-(gopher|doc|php|glob|file|phar|zlib|ftp|ldap|dict|ogg|data)\:\/
-# Java 注入/反序列化：检测 java.lang 类引用
-java\.lang
-# PHP 全局变量：检测 $_GET/$_POST 等超全局变量访问
-\$_(GET|post|cookie|files|session|env|phplib|GLOBALS|SERVER)\[
+# Cookie 攻击特征检测
+# Cookie 场景下高频 payload：JNDI、反序列化、JWT 混淆、SQL 盲注、伪协议
 
-# Log4Shell / JNDI 注入 (CVE-2021-44228)
-# Log4Shell/JNDI 注入：检测 ${jndi:...} 载荷
-\$\{jndi:(ldap|dns|rmii|iiop|http|https|nis|corba|nds)
-
-# JWT none 算法攻击
-"alg"\s*:\s*"none"
-
-# ========== 现代 SQL 注入 ==========
-# SQL 时间盲注：检测 PostgreSQL pg_sleep
-pg_sleep\s*\(
-# SQL 报错注入：检测 MySQL extractvalue
-extractvalue\s*\(
-# SQL 报错注入：检测 MySQL updatexml
-updatexml\s*\(
+# ========== JNDI / Log4Shell ==========
+\$\{jndi:(?:ldap[s]?|dns|rmi|iiop|http|https|nis|corba|nds):[^}]*\}
 
 # ========== 反序列化 ==========
-"@type"\s*:\s*"com\.sun\.
-# 反序列化：检测 java.lang.Runtime/ProcessBuilder
-"@type"\s*:\s*"java\.lang\.(Runtime|ProcessBuilder)
-# Java 反序列化：检测 Base64 Java 序列化魔术头
+"@type"\s*:\s*"(?:com\.sun|java\.lang\.(?:Runtime|ProcessBuilder)|org\.apache\.(?:commons|ibatis|logging)|org\.springframework|com\.mysql|ch\.qos\.logback)[^"]*"
+O:\d+:"[^"]+":\d+:\{
 rO0ABX
+AAEAAAD
+
+# ========== JWT 算法混淆 ==========
+"alg"\s*:\s*"none"
+"jwk"\s*:
+"x5c"\s*:
+"kid"\s*:\s*["']
+
+# ========== SQL 盲注 ==========
+(?<!\w)sleep\s*\(\s*\d+\s*\)
+(?<!\w)benchmark\s*\(
+(?<!\w)pg_sleep\s*\(
+(?<!\w)extractvalue\s*\(
+(?<!\w)updatexml\s*\(
+
+# ========== 命令注入 ==========
+(?<!\w)(?:eval|exec|system|shell_exec|passthru|proc_open|popen)\s*\(
+`[^`]*`
+\$\([^)]+\)
+
+# ========== XSS / 伪协议 ==========
+<\s*script\b
+javascript:
+(?<!\w)(?:file|gopher|dict|ldap|ftp|phar|glob|data):/+[^\n]+
+
+# ========== SSTI ==========
+(?:\$\{|#\{)[^}]*(?:class|runtime|process|T\s*\(|invoke|exec|getRuntime)[^}]*\}
