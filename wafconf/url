@@ -27,3 +27,10 @@
 
 # SMB 协议探测 / 扫描拦截（如 EternalBlue、SMB 服务枚举）
 (SMBr|SMB@|NT LM 0\.12)
+
+# URL 编码的路径混淆探测（如下划线编码为 %5f 的 _next 静态资源路径）
+/%5[fF][nN][eE][xX][tT]
+
+# Cobalt Strike / 常见 C2 信标与下载路径
+^/(?:WuEL|SiteLoader|mPlayer|stager64)(?:[/?#]|$)
+^/download/file\.ext(?:[/?#]|$)

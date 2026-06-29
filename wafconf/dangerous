@@ -260,10 +260,11 @@ bash\.exe
 ^/yarn-error(?:/.*)?$
 ^/next\.config\.(?:js|mjs|ts)$
 
-# Node.js 调试接口（Node --inspect）
+# Node.js 调试接口（Node --inspect / JetBrains WebStorm 调试代理）
 ^/json/list$
 ^/json/version$
 ^/json/activatebreak/
+^/json/serverinfo(?:/.*)?$
 
 # Node.js 常见框架/应用后台
 # Strapi Admin
