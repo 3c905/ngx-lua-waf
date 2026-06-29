@@ -30,6 +30,11 @@ javascript:
 # CRLF 注入（Header 值中包含换行符）
 [\r\n]
 
+# Next.js Middleware Authorization Bypass (CVE-2025-29927)
+# 外部请求不应携带 Next.js 内部中间件头
+^x-middleware-subrequest:
+^x-middleware-override-headers:
+
 # [aggressive]
 
 # 激进模式：所有 X-Forwarded-* 头（正常反向代理场景会误伤）

@@ -136,7 +136,58 @@ Total: valid=660 invalid=0
 
 ---
 
-## 五、仍需注意的非 WAF 场景
+## 五、近期 CVE 补充规则（2025-2026）
+
+针对 alcon.cn 使用的 **Next.js / React** 技术栈以及当前公开的高危 CVE，额外补充了以下规则：
+
+### 1. `wafconf/header` — Next.js Middleware Bypass (CVE-2025-29927)
+
+```regex
+^x-middleware-subrequest:
+^x-middleware-override-headers:
+```
+
+- **漏洞**：Next.js 外部请求携带内部头 `x-middleware-subrequest` 可跳过中间件鉴权。
+- **规则**：直接拦截外部请求中的 Next.js 内部中间件头，外部用户不应发送。
+- **影响版本**：Next.js 11.1.4–15.2.2
+
+### 2. `wafconf/post` — React2Shell / RSC 反序列化 (CVE-2025-55182 / CVE-2025-66478) 与 RSC DoS (CVE-2026-23870)
+
+```regex
+"status"\s*:\s*"resolved_model"
+"_response"\s*:\s*\{\s*"_prefix"
+"_formData"\s*:\s*\{\s*"get"\s*:\s*"\$\d+:(?:constructor|__proto__)
+\$\d+:(?:constructor|__proto__):(?:constructor|then)
+process\.mainModule\.require\s*\(\s*['"]child_process['"]\s*\)
+vm#runIn(?:This|New)Context
+\$@\d+
+```
+
+- **漏洞**：React Server Components Flight 协议反序列化不可信数据，导致预认证 RCE（React2Shell）或 DoS。
+- **规则**：检测 POST body 中的异常 Flight payload 特征（`resolved_model`、`_response._prefix`、原型污染链、`child_process` 等）。
+- **注意**：未在 header 层直接封禁 `Next-Action` / `rsc-action-id`，因为正常 Server Actions 也会使用这些头，直接 block 误伤高。
+
+### 3. 其他近期 CVE 评估
+
+| CVE | 目标 | WAF 可拦截性 | 说明 |
+|-----|------|--------------|------|
+| CVE-2025-29927 | Next.js | ✅ 已补充 | Header 层拦截内部中间件头 |
+| CVE-2025-55182 / CVE-2025-66478 | React/Next.js RSC | ✅ 已补充 | POST body 检测异常 Flight payload |
+| CVE-2026-23870 / CVE-2026-23869 | React/Next.js RSC | ✅ 部分补充 | 同 React2Shell 检测 + CC 限速 |
+| CVE-2026-27978 | Next.js Server Actions CSRF | ⚠️ 不推荐 | `Origin: null` 绕过，需业务层 CSRF Token |
+| CVE-2026-29057 | Next.js rewrite 请求走私 | ⚠️ 部分 | 依赖 chunked TE 检测，header 已有请求走私规则 |
+| CVE-2025-15566 / CVE-2026-3288 | ingress-nginx | ❌ 不可拦截 | K8s Ingress 注解配置注入，非 HTTP 层面 |
+| CVE-2026-41940 | cPanel/WHM | ❌ 不可拦截 | 认证绕过，需应用层补丁 |
+| CVE-2026-9082 | Drupal PostgreSQL SQLi | ✅ 已有覆盖 | args/post 中 SQLi 规则可覆盖 |
+| CVE-2026-45247 | Magento PHP 对象注入 | ✅ 已有覆盖 | args/post 中反序列化规则可覆盖 |
+| CVE-2026-40175 | Axios 原型污染 | ✅ 已有覆盖 | args 中已有原型污染检测 |
+| CVE-2025-64459 | Django SQL 注入 | ✅ 已有覆盖 | args/post 中 SQLi 规则可覆盖 |
+| CVE-2025-31125 | Vite WASM Path Traversal | ✅ 已有覆盖 | traversal/args 规则可覆盖 |
+| CVE-2025-66614 / CVE-2026-24733 | Tomcat | ⚠️ 有限 | HTTP/0.9 与 SNI 层，WAF 难以覆盖 |
+
+---
+
+## 六、仍需注意的非 WAF 场景
 
 以下请求由 Nginx 本身拒绝，不属于 WAF 规则覆盖范围，但已在边缘被拦截：
 
@@ -151,7 +202,7 @@ Total: valid=660 invalid=0
 
 ---
 
-## 六、建议
+## 七、建议
 
 1. **开启 CC 增强防御**：日志中存在大量扫描器高频探测，建议 `CCEnhanced = "on"`，并观察静态资源无 Referer 阈值。
 2. **监控 POST / 异常行为**：`185.213.175.171` 的 POST / 请求在 access log 中无 body 内容，建议检查后端是否已记录该 IP 的 POST payload。

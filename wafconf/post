@@ -130,3 +130,14 @@ COPY\s+\w+\s+(?:TO|FROM)\s+PROGRAM
 \.runCommand\s*\(\s*\{\s*"?(?:hostInfo|listDatabases|getCmdLineOpts|shutdownServer)
 accessKey=\w+
 nacos\.core\.auth\.plugin\.nas\.
+
+# ========== React Server Components / Next.js Server Actions 攻击 ==========
+# React2Shell (CVE-2025-55182 / CVE-2025-66478) 与 RSC DoS (CVE-2026-23870)
+# 检测 Flight 协议中的异常反序列化/原型污染载荷
+"status"\s*:\s*"resolved_model"
+"_response"\s*:\s*\{\s*"_prefix"
+"_formData"\s*:\s*\{\s*"get"\s*:\s*"\$\d+:(?:constructor|__proto__)
+\$\d+:(?:constructor|__proto__):(?:constructor|then)
+process\.mainModule\.require\s*\(\s*['"]child_process['"]\s*\)
+vm#runIn(?:This|New)Context
+\$@\d+
