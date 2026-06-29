@@ -363,10 +363,14 @@ bash\.exe
 # Django
 ^/admin(?:/.*)?$
 ^/django-admin(?:/.*)?$
+# Django REST Framework 可浏览 API 登录（信息泄露 + 潜在越权入口）
+^/api-auth(?:/.*)?$
 
 # Flask Debug Pin bypass / Werkzeug console
 ^/console$
-^/__debugger__
+^/__debugger__(?:/.*)?$
+# Flask-DebugToolbar
+^/_debug_toolbar(?:/.*)?$
 
 # FastAPI 文档接口（信息泄露）
 ^/docs$
@@ -376,6 +380,11 @@ bash\.exe
 # Tornado / Web2py / Bottle
 ^/admin/default/index$
 ^/examples/\w+$
+
+# Zope / Plone / Odoo
+^/manage_main$
+^/Control_Panel$
+^/web/database/manager$
 
 # Supervisor / Celery / Flower
 ^/supervisor(?:/.*)?$

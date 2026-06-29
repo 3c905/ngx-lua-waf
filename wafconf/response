@@ -55,3 +55,9 @@ Joomla!\s+\d+\.\d+
 Laravel\s+\d+\.\d+
 ThinkPHP\s+\d+\.\d+
 Spring\s+Boot\s+\d+\.\d+
+Django\s+\d+\.\d+
+Flask\s+\d+\.\d+
+FastAPI\s+\d+\.\d+
+Werkzeug/\d+\.\d+
+Python/\d+\.\d+
+uvicorn/\d+\.\d+
