@@ -73,3 +73,12 @@
 # 开发工具/命令行客户端
 
 (curl|wget|ApacheBench|httpie|PostmanRuntime|Insomnia|node-fetch|Go-http-client|Java)
+
+
+
+# 7. 极简/伪造 UA（常被扫描器、资产测绘工具使用）
+
+# 仅包含平台信息却无浏览器内核标识，或仅有一个裸的 Mozilla/5.0
+
+^Mozilla/5\.0 \(Windows NT 10\.0; Win64; x64\)$
+^Mozilla/5\.0$

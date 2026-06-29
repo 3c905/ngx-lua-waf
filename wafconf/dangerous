@@ -341,6 +341,9 @@ bash\.exe
 # Joomla
 ^/administrator/index\.php$
 ^/administrator/components(?:/.*)?$
+^/administrator/manifests(?:/.*)?$
+^/plugins/editors/jce(?:/.*)?$
+^/index\.php\?option=com_jce
 
 # Dedecms / EmpireCMS / Discuz
 ^/dede(?:/.*)?$
