@@ -6,16 +6,23 @@
 ^/\..*$
 
 # Spring Boot Actuator 敏感端点（不含 health，避免 K8s 探针失效）
-^/actuator/(env|beans|heapdump|threaddump|mappings|configprops|loggers|conditions|caches|scheduledtasks)$
+# 覆盖 CVE-2026-22731/22733/40976 涉及的 Actuator 认证绕过场景：限制暴露敏感端点可降低利用面
+^/actuator/(env|beans|heapdump|threaddump|mappings|configprops|loggers|conditions|caches|scheduledtasks|info|auditevents|httptrace|sbom|integrationgraph)$
 
-# Swagger / OpenAPI
-swagger\.json(?:[/?#]|$)
+# Swagger / OpenAPI 文档接口（信息泄露）
+^/.*swagger\.json(?:[/?#]|$)
 ^/swagger-ui(?:/.*)?$
+^/swagger-ui\.html$
 ^/swagger-resources(?:/.*)?$
 ^/v2/api-docs(?:/.*)?$
 ^/v3/api-docs(?:/.*)?$
+^/api-docs(?:/.*)?$
 ^/openapi\.json$
+^/openapi\.ya?ml$
+^/api(?:/v\d+)?/openapi\.json$
+^/api(?:/v\d+)?/openapi\.ya?ml$
 ^/redoc$
+^/webjars/swagger-ui(?:/.*)?$
 
 # phpinfo / 状态页（常见变体）
 ^/phpinfo\.php$
@@ -96,7 +103,7 @@ swagger\.json(?:[/?#]|$)
 # Spring Framework RCE via Data Binding (CVE-2022-22965) - signature in args
 # Spring Cloud Function SpEL RCE (CVE-2022-22963)
 ^/functionRouter$
-# Spring Boot Actuator jolokia / logfile / env
+# Spring Boot Actuator jolokia / logfile / env / shutdown 等高敏感端点
 ^/actuator/(jolokia|logfile|trace|dump|shutdown|restart|sessions|flyway|liquibase)$
 # Spring Boot whitelabel error page not a CVE but info leak
 ^/error$
