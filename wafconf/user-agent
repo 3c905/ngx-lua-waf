@@ -48,7 +48,7 @@
 
 # 商业/组织扫描器与测绘平台
 
-(l9explore|l9tcpid|LeakIX|ModatScanner|GenomeCrawlerd|CyberConvoyScout|InternetMeasurement|Palo\s*Alto|Cortex\s*Xpanse|visionheight\.com|Scanner/|NTRIP|WebCopier|Infrawatch)
+(Odin|l9explore|l9tcpid|LeakIX|ModatScanner|GenomeCrawlerd|CyberConvoyScout|InternetMeasurement|Palo\s*Alto|Cortex\s*Xpanse|visionheight\.com|Scanner/|NTRIP|WebCopier|Infrawatch)
 
 
 

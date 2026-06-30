@@ -34,3 +34,6 @@
 # Cobalt Strike / 常见 C2 信标与下载路径
 ^/(?:WuEL|SiteLoader|mPlayer|stager64)(?:[/?#]|$)
 ^/download/file\.ext(?:[/?#]|$)
+
+# IoT / 路由器漏洞探测路径（D-Link/Realtek SDK、HNAP、Odin）
+^/(?:sdk|HNAP1|evox/about|odinhttpcall\d+)(?:/.*)?$
