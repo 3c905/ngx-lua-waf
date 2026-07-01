@@ -506,6 +506,10 @@ bash\.exe
 # AWX / Ansible Tower
 ^/api/v2/(?:jobs|job_templates|credentials|inventories|projects|organizations|users)(?:/.*)?$
 
+# [ai]
+# [D24] AI / LLM 服务 API 探测（非 AI 站点的 OpenAI 兼容接口扫描）
+^/v1/(?:models|embeddings|chat/completions|completions|images|audio|files|fine-tunes|batches|assistants|threads|vector_stores|moderations|realtime)$
+
 # [database]
 # 数据库管理后台 / 监控 / CVE
 
@@ -625,6 +629,11 @@ bash\.exe
 # MinIO
 ^/minio(?:/.*)?$
 ^/minio-admin(?:/.*)?$
+
+# [vpn]
+# [D29] VPN / 远程接入设备探测
+^/vpnsvc/connect\.cgi$
+^/epa/scripts/win/nsepa_setup\.exe$
 
 # [aggressive]
 # 高误伤规则，按需开启

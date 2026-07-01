@@ -20,7 +20,8 @@
 
 # 常见爬虫/数据采集工具
 
-(cdn-detect|SemrushBot|pyspider|Scrapy|python-requests|Python-urllib|HTTrack|harvest|Parser|libwww|BBBike|PycURL|zmeu|BabyKrokodil|httperf|SF/|Office)
+# [UA2] 常见爬虫 / 数据采集（新增 python-httpx）
+(cdn-detect|SemrushBot|pyspider|Scrapy|python-requests|python-httpx|Python-urllib|HTTrack|harvest|Parser|libwww|BBBike|PycURL|zmeu|BabyKrokodil|httperf|SF/|Office)
 
 
 
@@ -82,3 +83,11 @@
 
 ^Mozilla/5\.0 \(Windows NT 10\.0; Win64; x64\)$
 ^Mozilla/5\.0$
+
+
+
+# 8. 单字符 / 极简伪造 UA
+
+# [UA7] 单字符伪造 UA：日志中出现单字符 UA（如 "M"）配合随机路径，多为 C2 信标或扫描器
+
+^M$

@@ -95,11 +95,12 @@
 | D21 | WebShell / 命令执行文件名 | 常见 webshell 命名 | 已上传 WebShell 的访问路径 | `(webshell\|c99\|r57\|shell\|cmd\|exec)\.(php\|jsp\|...)` |
 | D22 | Java 监控 / 控制台 | Druid、H2 Console、Jolokia | 未授权访问数据库、执行 MBean 操作 | `^/druid(/.*)?$`、`^/h2-console(/.*)?$` |
 | D23 | Git / 版本控制泄露 | .git 目录、.git-credentials | 源码、仓库凭据泄露 | `\.git/`、`\.git-credentials` |
-| D24 | LLM / OpenAI API 探测 | 模型、嵌入、补全接口 | 未授权调用大模型 API，造成资源滥用 | `^/v1/(models\|embeddings\|completions\|chat/completions)$` |
+| D24 | LLM / OpenAI API 探测 | 模型、嵌入、补全接口 | 未授权调用大模型 API，造成资源滥用 | `^/v1/(models\|embeddings\|chat/completions\|completions\|images\|audio\|files\|fine-tunes\|batches\|assistants\|threads\|vector_stores\|moderations\|realtime)$` |
 | D25 | 版本 / API 根路径探测 | 通用探测 | 测绘、版本识别 | `^/version$`、`^/v1$` |
 | D26 | 激进模式：健康检查 / Metrics | 可能误伤 K8s 探针、Prometheus | 业务若不需要暴露则禁用 | `^/health$`、`^/metrics(/.*)?$` |
 | D27 | 激进模式：调试 / 测试目录 | backup/test/debug/tmp 等 | 误伤风险高，按需启用 | `^/(backup\|backups\|test\|tests\|debug\|tmp\|...)(/.*)?$` |
 | D28 | 激进模式：源码 / 日志 / 备份扩展名 | 误伤风险高 | 技术类站点可能正常提供源码/日志下载 | `\.(java\|class\|jar\|py\|sh\|log\|bak\|backup\|...)$` |
+| D29 | VPN / 远程接入设备探测 | Citrix NetScaler、SSL VPN 接口 | 未授权访问或 CVE 利用 | `^/vpnsvc/connect\.cgi$`、`^/epa/scripts/win/nsepa_setup\.exe$` |
 
 > **说明**：以 `# [core]` 标注的规则为默认启用，误伤较低；以 `# [aggressive]` 标注的规则误伤风险较高，按需启用。
 
@@ -205,7 +206,7 @@
 | UA4 | 资产测绘 / 目录爆破 | 互联网测绘与暴力枚举工具 | 快速发现暴露面 | `Nuclei`、`Censys`、`Shodan`、`ZoomEye`、`Gobuster` |
 | UA5 | 商业 / 组织扫描器 | 商业测绘平台、LeakIX 等 | 持续性互联网暴露面扫描 | `l9explore`、`LeakIX`、`Palo\s*Alto`、`Cortex\s*Xpanse`、`Infrawatch` |
 | UA6 | HTTP Banner / 指纹识别 | 仅做 Banner 识别的扫描器 | 收集技术栈指纹 | `HTTP\s+Banner\s+Detection`、`ipip\.net` |
-| UA7 | 开发工具 / 命令行客户端 | curl、wget、ab、Postman、Go/Java 客户端 | 自动化脚本或测试流量，按需限制 | `curl`、`wget`、`ApacheBench`、`PostmanRuntime`、`Go-http-client` |
+| UA7 | 开发工具 / 命令行客户端 / 极简伪造 UA | curl、wget、ab、Postman、Go/Java 客户端，以及单字符伪造 UA | 自动化脚本、扫描器或测试流量，按需限制 | `curl`、`wget`、`ApacheBench`、`PostmanRuntime`、`Go-http-client`、`^M$` |
 
 ---
 
