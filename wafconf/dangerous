@@ -213,6 +213,8 @@ umeditor\.config\.js$
 # 环境变量 / 凭证文件（精确模式）
 \.env(?:\.[a-zA-Z0-9_-]+)?$
 \.env\..*\.(?:php|bak|backup|old|orig|save)$
+^/config\.env(?:[/?#]|$)
+^/data/json/config\.json(?:[/?#]|$)
 \.git-credentials$
 \.gitconfig$
 \.git/

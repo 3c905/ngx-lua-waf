@@ -267,6 +267,13 @@ check_deploy() {
         else
             log_warn "nginx.conf 中未找到 waf.lua 引用，请手动配置"
         fi
+
+        # 检查是否存在会导致 WAF 被绕过的 return 301
+        # 注意：简单 grep 可能误报 HTTPS 跳转，但鉴于风险较高，发现即提醒
+        if grep -qE "return\s+301\s+https://" "$nginx_conf" 2>/dev/null; then
+            log_warn "nginx.conf 中发现 'return 301 https://...'，若位于 HTTP server 块且在同一 server 块引用了 waf.lua，则会绕过 WAF"
+            log_warn "请参考 nginx-example.conf，使用 content_by_lua_block 执行 301 跳转"
+        fi
     fi
 
     if [ "$errors" -eq 0 ]; then

@@ -21,7 +21,7 @@
 
 # 扫描器/漏洞探测路径
 # [U6] Cobalt Strike / C2 随机信标路径（扩展 observed 样本）
-^/(?:Dr0v|aaa9|aab[89]|jMRS|SGUn|Ajx3wTA89968)$
+^/(?:Dr0v|aaa9|aab[89]|jMRS|SGUn|Ajx3wTA89968)(?:[/?#]|$)
 
 # 上传目录脚本执行探测（修复原 \w+ 无效转义）
 ^/(?:attachments|upimg|images|uploadfiles|html|uploads|templets|template|data|inc|forumdata|upload|includes|cache|avatar)/(\w+)\.(?:php\d?|jsp)$
@@ -37,13 +37,20 @@
 ^/download/file\.ext(?:[/?#]|$)
 
 # [U3/U4] CMS / 后台 / 脚本探测路径（日志中新发现）
-^/xxxss$
-^/assets/js/fast\.js$
-^/index\.php/store/passport/login$
-^/admin-api/system/auth/get-permission-info$
+^/xxxss(?:[/?#]|$)
+^/assets/js/fast\.js(?:[/?#]|$)
+^/index\.php/store/passport/login(?:[/?#]|$)
+^/admin-api/system/auth/get-permission-info(?:[/?#]|$)
 ^/api\.php\?s=
-^/(?:baker|1234)\.php$
-^/config\.dev\.php$
+^/(?:baker|1234)\.php(?:[/?#]|$)
+^/config\.dev\.php(?:[/?#]|$)
 
 # IoT / 路由器漏洞探测路径（D-Link/Realtek SDK、HNAP、Odin）
 ^/(?:sdk|HNAP1|evox/about|odinhttpcall\d+)(?:/.*)?$
+
+# [U7] 日志中新发现的 WebShell / 管理后台 / 配置探测路径
+^/admin/webadmin\.php(?:[/?#]|$)
+^/data/json/config\.json(?:[/?#]|$)
+^/config\.env(?:[/?#]|$)
+^/zz\.php(?:[/?#]|$)
+^/leftDao\.php(?:[/?#]|$)

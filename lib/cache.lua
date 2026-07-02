@@ -153,7 +153,7 @@ function _M.read_tagged_rule_cached(rulepath, var, force_reload)
     for line in file:lines() do
         line = string.gsub(line, "\r$", "")
         if line ~= "" then
-            local tag = string.match(line, "^# %[(%%w+)%]")
+            local tag = string.match(line, "^# %[(%w+)%]")
             if tag then
                 current_tag = tag
             elseif string.sub(line, 1, 1) ~= "#" then
