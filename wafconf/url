@@ -54,3 +54,11 @@
 ^/config\.env(?:[/?#]|$)
 ^/zz\.php(?:[/?#]|$)
 ^/leftDao\.php(?:[/?#]|$)
+
+# [U8] 日志中新发现的扫描器/webshell 探测路径
+^/developmentserver/metadatauploader(?:[/?#]|$)
+^/util/aes\.js(?:[/?#]|$)
+^/api/c5/business/livehouse/index(?:[/?#]|$)
+
+# [U9] URL 路径中 URL 编码的 XSS 探测载荷（如 /path/35%27;%22%20style=...）
+(?:%27|%22|%60|%3C|%3E)(?:%[0-9a-fA-F]{2}|[^&%]){0,80}?(?:%20|\+|%0[bB])?(?:style|on[a-z]+|javascript)(?:%3D|%3A|=)(?:%22|%27|%60)

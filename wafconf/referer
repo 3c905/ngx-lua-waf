@@ -2,3 +2,6 @@
 # 主要覆盖 SEO 垃圾流量、已知 CC/扫描来源
 
 (semalt|darodar|buttons-for-website|site\.ru|trafficmonetize|sharebutton|social-button|floating-share|free-share-buttons)
+
+# 直接以服务器 IP 作为 Referer 的流量（多为扫描器/伪造来源）
+^https?://\d+\.\d+\.\d+\.\d+(?::\d+)?/?$

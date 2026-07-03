@@ -91,3 +91,6 @@
 # [UA7] 单字符伪造 UA：日志中出现单字符 UA（如 "M"）配合随机路径，多为 C2 信标或扫描器
 
 ^M$
+
+# 仅含浏览器签名却无平台/OS 信息（常见于伪造 UA 的爬虫/扫描器）
+^Mozilla/5\.0\s+AppleWebKit/\d+\.\d+\s+\(KHTML,\s*like\s*Gecko\)\s+Chrome/\d+\.\d+\.\d+\.\d+\s+Safari/\d+\.\d+$

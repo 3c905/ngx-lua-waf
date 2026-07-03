@@ -16,3 +16,7 @@
 # 3. RAT / 远控木马常见通信特征
 # RAT/远控木马常见方法前缀
 (CHECK|DEBUG|HELP|INFO|OPTIONS|PUT|PRI)
+
+# 二进制协议探测（如 MS SQL TDS Pre-Login 包伪装成 HTTP 方法）
+^[\x00-\x1f]
+^\x12\x01\x00
