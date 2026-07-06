@@ -94,3 +94,7 @@
 
 # 仅含浏览器签名却无平台/OS 信息（常见于伪造 UA 的爬虫/扫描器）
 ^Mozilla/5\.0\s+AppleWebKit/\d+\.\d+\s+\(KHTML,\s*like\s*Gecko\)\s+Chrome/\d+\.\d+\.\d+\.\d+\s+Safari/\d+\.\d+$
+
+# 日志加固：明确加边界，防止漏过变体（alcon.lumaicare.com.log）
+\bzgrab\b
+\bgo-http-client\b

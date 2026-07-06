@@ -141,3 +141,17 @@ nacos\.core\.auth\.plugin\.nas\.
 process\.mainModule\.require\s*\(\s*['"]child_process['"]\s*\)
 vm#runIn(?:This|New)Context
 \$@\d+
+
+# ========== 2026 CVE 漏洞 Body 特征 ==========
+
+# CVE-2026-0768: Langflow /validate code 参数 Python RCE
+"code"\s*:\s*["'](?:__import__|os\.system|subprocess\.|eval\s*\(|exec\s*\(|compile\s*\()
+
+# CVE-2026-21858: n8n Form/Webhook JSON 伪造文件路径
+"filepath"\s*:\s*"/(?:etc|proc|home|root|var|usr|opt|tmp)/
+
+# CVE-2025-71333 / CVE-2025-71334: Flowise chatId/chatflowId 路径穿越
+chat(?:flow)?Id["']?\s*:\s*["'][^"']*(?:\.\.|%2e%2e|%252e)
+
+# CVE-2026-21876: OWASP CRS multipart charset 绕过（UTF-7/UTF-16/UTF-32）
+charset\s*=\s*["']?(?:utf-7|utf-16(?:le|be)?|utf-32(?:le|be)?)

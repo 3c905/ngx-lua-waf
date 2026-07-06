@@ -27,6 +27,14 @@ javascript:
 # DoS / 超大请求：Content-Length > 10MB
 ^Content-Length:\s*(?:[1-9]\d{7,}|\d{10,})
 
+# RDP / TDS 预登录探测特征（日志中出现 Cookie: mstshash=hello）
+mstshash
+
+# CVE-2026-21876: OWASP CRS multipart charset 绕过
+# 阻断非标准/危险字符集声明，降低 UTF-7/UTF-16/UTF-32 编码绕过风险
+^Content-Type:.*charset\s*=\s*["']?(?:utf-7|utf-16(?:le|be)?|utf-32(?:le|be)?)
+^Accept-Charset:.*(?:utf-7|utf-16(?:le|be)?|utf-32(?:le|be)?)
+
 # CRLF 注入（Header 值中包含换行符）
 [\r\n]
 

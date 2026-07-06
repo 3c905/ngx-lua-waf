@@ -20,3 +20,15 @@
 # 二进制协议探测（如 MS SQL TDS Pre-Login 包伪装成 HTTP 方法）
 ^[\x00-\x1f]
 ^\x12\x01\x00
+
+# 日志加固：RDP / TDS / 远控木马常用方法前缀（alcon.lumaicare.com.log）
+# mstshash=hello 是 RDP 预登录包特征；空方法常见于批量探测
+mstshash
+^\s*$
+^CONNECT$
+
+# 日志加固：Nginx 日志中以 \\xNN 形式记录的二进制协议方法
+# 实际运行时也可能直接收到原始控制字节（已由 ^[\\x00-\\x1f] 覆盖）
+^\\x[0-9a-fA-F]{2}
+\\x00
+^-$

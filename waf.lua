@@ -390,6 +390,8 @@ elseif PostCheck then
             -- ============================================================
             ngx.req.read_body()
             local args = ngx.req.get_post_args()
+
+            -- 通用 POST 参数扫描
             if args then
                 for key, val in pairs(args) do
                     local data
@@ -426,6 +428,34 @@ elseif PostCheck then
                         end
                     end
                 end
+            end
+
+            -- JSON Body 扫描：针对 CVE-2026-0768 / CVE-2026-21858 / CVE-2025-71333 等 JSON payload
+            local content_type_header = ngx.req.get_headers()["content-type"]
+            if type(content_type_header) == "table" then
+                content_type_header = content_type_header[1]
+            end
+            local ct = content_type_header or ""
+            if string.find(ct, "application/json", 1, true) then
+                local raw_body = ngx.req.get_body_data()
+                if raw_body and raw_body ~= "" then
+                    for _, rule in pairs(postrules or {}) do
+                        if rule ~= "" then
+                            local m = cache.match_cached(raw_body, rule, "isj")
+                            if m then
+                                log('POST', ngx.var.request_uri, "-", "[POST][403] hit=[" .. string.sub(m[0] or "-", 1, 200) .. "] rule=" .. rule)
+                                if should_block("PostAction") then
+                                    return say_html()
+                                end
+                                return
+                            end
+                        end
+                    end
+                    waf_debug("WAF_POST_JSON_PASS: ip=", client_ip, " uri=", request_uri)
+                end
+            end
+
+            if args then
                 waf_debug("WAF_POST_BODY_PASS: ip=", client_ip, " uri=", request_uri)
             else
                 waf_debug("WAF_POST_NOARGS: ip=", client_ip, " uri=", request_uri)

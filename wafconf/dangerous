@@ -83,6 +83,92 @@
 # 代理滥用：请求 URI 为完整 URL
 ^https?://
 
+# ========== 日志加固：alcon.lumaicare.com.log 中遗漏的扫描路径 ==========
+# 以下规则针对日志中实际绕过并返回 301/200 的扫描请求，误伤低
+
+# AI / LLM API 探测（OpenAI 兼容接口扫描）
+^/v1/(?:models|completions|chat/completions|embeddings|fine-tunes)(?:[/?#]|$)
+
+# 非隐藏 env 文件变体（/env、/aws.env、/env/prod.env 等）
+^/(?:env|aws\.env|mongodb\.env|database\.env|db\.env|mysql\.env|postgres\.env|redis\.env|azure\.env|heroku\.env)(?:[/?#]|$)
+^/envs?/(?:production|staging|prod|test|dev)\.env(?:[/?#]|$)
+
+# 顶层敏感配置 / 凭证 / 锁文件
+^/(?:config\.json|config\.js|config\.ya?ml|config\.xml|config\.ini|config\.php|configuration\.php|settings\.php|localsettings\.php|web\.config)(?:[/?#]|$)
+^/(?:composer\.json|composer\.lock|package-lock\.json|yarn\.lock|Gemfile(?:\.lock)?|Jenkinsfile)(?:[/?#]|$)
+^/(?:app\.json|app\.config\.js|ecosystem\.config\.js|next\.config\.(?:js|mjs|ts)|nuxt\.config\.js|pm2(?:\.config)?\.js|gatsby-config\.js)(?:[/?#]|$)
+^/(?:docker-compose(?:\.override|\.staging|\.prod|\.production|\.dev|\.test)?\.ya?ml)(?:[/?#]|$)
+
+# 调试/信息脚本
+^/(?:test\.php|info\.php|_phpinfo)(?:[/?#]|$)
+
+# 通用 secrets / credentials / kubeconfig
+^/(?:secrets\.json|secrets\.ya?ml|secrets\.properties)(?:[/?#]|$)
+^/(?:credentials\.json|gcp-credentials\.json|aws-credentials|azure-credentials\.json|google-credentials\.json|firebase-adminsdk\.json|iam_credentials\.json|s3_credentials\.json|ec2_credentials\.json|aws\.credentials|azure\.credentials)(?:[/?#]|$)
+^/(?:kubeconfig|kube-config|k8s-config\.ya?ml|kubeconfig\.ya?ml)(?:[/?#]|$)
+
+# 框架 config 目录下的敏感文件
+^/config/(?:database\.php|database\.ya?ml|application\.ya?ml|master\.key|credentials\.ya?ml\.enc|secrets\.ya?ml|environment\.rb|environments/[^/]+\.rb|initializers/[^/]+\.rb|settings\.ya?ml|settings/[^/]+\.ya?ml|ldap\.ya?ml|redis\.ya?ml|cable\.ya?ml|storage\.ya?ml|security\.ya?ml|packages/[^/]+\.ya?ml|services\.ya?ml|routing\.ya?ml|config_prod\.ya?ml|config_dev\.ya?ml|config\.inc\.php|config\.ini|dbconfig\.ini|database\.ya?ml\.pgsql|database\.ya?ml\.default)(?:[/?#]|$)
+
+# 各框架常见 config.php 位置
+^/(?:app|includes|system|core|lib|inc|classes|class|admin(?:/includes)?|application/config|application/config/database|laravel/config|symfony(?:/app)?/config|cms/Web|plugins/web|app/etc|app/config/(?:databases|database|parameters|routing|security|services|config_prod|config_dev))/config\.php(?:[/?#]|$)
+^/(?:db_config\.php|database_config\.php)(?:[/?#]|$)
+
+# Java / XML 配置
+^/(?:app/config|app/etc)/config\.xml(?:[/?#]|$)
+^/WEB-INF/config\.xml(?:[/?#]|$)
+^/src/main/resources/(?:config|secrets)\.(?:properties|ya?ml)(?:[/?#]|$)
+
+# CMS 配置
+^/(?:sites/default|drupal/sites/default|administrator|joomla)/(?:settings|local\.settings|default\.settings|configuration)\.php(?:[/?#]|$)
+^/app/config/parameters\.ya?ml(?:[/?#]|$)
+^/app/config/database\.ya?ml(?:\.pgsql)?~?(?:[/?#]|$)
+
+# 云 / DevOps 凭证路径
+^/(?:aws|gcloud|azure|chef/data_bags/credentials|jenkins)/credentials(?:\.json|\.xml)?(?:[/?#]|$)
+^/(?:kubernetes|k8s|helm|charts|deploy/k8s|manifests|infra/k8s|ops/k8s|cluster)/(?:secrets|configmap)\.ya?ml(?:[/?#]|$)
+^/var/run/secrets/kubernetes\.io/serviceaccount/token(?:[/?#]|$)
+^/(?:pillar|salt/pillar|playbooks/vars|ansible/vars)/secrets\.(?:sls|ya?ml)(?:[/?#]|$)
+
+# Spring Boot Actuator / 管理后台变体
+^/_actuator/(?:env|beans|heapdump|threaddump|mappings|configprops|loggers|conditions|caches|scheduledtasks|info|auditevents|httptrace|sbom|integrationgraph)(?:[/?#]|$)
+^/manage/configprops(?:[/?#]|$)
+^/admin/heapdump(?:[/?#]|$)
+
+# 补充：第一次验证后仍遗漏的框架/凭证路径
+^/app/config/database\.php(?:[/?#]|$)
+^/application/config/database\.php(?:[/?#]|$)
+^/laravel/config/(?:app|database)\.php(?:[/?#]|$)
+^/(?:_|inc/|includes/)?config\.inc(?:\.php)?(?:[/?#]|$)
+^/(?:blog|cms|site|wordpress|wp)/wp-config\.php(?:[/?#]|$)
+^/wp-config-(?:backup|sample)\.php(?:[/?#]|$)
+^/wp-config\.inc(?:[/?#]|$)
+^/wp-config\.php_bak(?:[/?#]|$)
+^/web\.config\.(?:bakup|tmp|temp|old)(?:[/?#]|$)
+^/includes/settings\.php(?:[/?#]|$)
+^/aws/config(?:\.json)?(?:[/?#]|$)
+^/(?:aws_credentials|credentials|credentials\.csv)(?:[/?#]|$)
+^/chef/data_bags/(?:credentials|users)/[^/]+\.json(?:[/?#]|$)
+^/secrets(?:[/?#]|$)
+
+# ========== 2026 年新增 CVE 漏洞防御 ==========
+# 针对最新公开 CVE 的可利用端点/路径，误伤可控
+
+# CVE-2026-0768 / ZDI-26-034: Langflow /validate code 参数 RCE
+^/validate(?:[/?#]|$)
+
+# CVE-2025-71327: Flowise 未授权注册
+^/api/v1/account/register(?:[/?#]|$)
+
+# CVE-2025-71333 / CVE-2025-71334: Flowise 文件上传/任意文件读取
+^/api/v1/attachments(?:/.*)?$
+^/api/v1/chatflows(?:[/?#]|$)
+^/api/v1/get-upload-file(?:[/?#]|$)
+^/api/v1/openai-assistants-file/download(?:[/?#]|$)
+
+# CVE-2026-2827: Open User Map PRO oum_location_notification XSS（GET 参数场景）
+^/wp-admin/admin-ajax\.php\?.*oum_location_notification
+
 # ========== 已知高危漏洞路径 ==========
 
 # PHPUnit RCE (CVE-2017-9841)

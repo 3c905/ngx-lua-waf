@@ -201,3 +201,15 @@ accessKey=\w+
 nacos\.core\.auth\.plugin\.nas\.
 # ZooKeeper 四字命令
 ^/(?:envi|ruok|stat|mntr|conf|dump|wchs|wchc|srst|crst|cons|kill)$
+
+# ========== 2026 CVE 漏洞参数特征 ==========
+
+# 通用路径穿越序列（覆盖 CVE-2025-71333 / CVE-2026-5192 等）
+\.\./
+\.\.\\
+%2e%2e(/|%2f|%252f)
+%252e%252e(/|%2f|%252f)
+
+# CVE-2026-5192: Forminator 文件路径穿越（upload-X[file][file_path] 指向系统文件）
+# CVE-2026-21858: n8n filepath 参数绝对路径读取
+(?:^|[^a-zA-Z0-9_])(?:/etc/passwd|/etc/shadow|/proc/self/environ|/home/[^/]+/.n8n/config|/root/.n8n/config|wp-config\.php|\.env)(?:[/?#]|$)
