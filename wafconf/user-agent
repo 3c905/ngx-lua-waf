@@ -49,7 +49,7 @@
 
 # 商业/组织扫描器与测绘平台
 
-(Odin|l9explore|l9tcpid|LeakIX|ModatScanner|GenomeCrawlerd|CyberConvoyScout|InternetMeasurement|Palo\s*Alto|Cortex\s*Xpanse|visionheight\.com|Scanner/|NTRIP|WebCopier|Infrawatch)
+(Odin|l9explore|l9tcpid|LeakIX|ModatScanner|GenomeCrawlerd|CyberConvoyScout|InternetMeasurement|Palo\s*Alto|Cortex\s*Xpanse|visionheight\.com|Scanner/|NTRIP|WebCopier|Infrawatch|FlowIQLabsBot)
 
 
 
@@ -73,7 +73,7 @@
 
 # 开发工具/命令行客户端
 
-(curl|wget|ApacheBench|httpie|PostmanRuntime|Insomnia|node-fetch|Go-http-client|Java)
+(curl|wget|ApacheBench|httpie|PostmanRuntime|Insomnia|node-fetch|Go-http-client|Java|okhttp|Dart)
 
 
 

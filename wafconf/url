@@ -62,3 +62,25 @@
 
 # [U9] URL 路径中 URL 编码的 XSS 探测载荷（如 /path/35%27;%22%20style=...）
 (?:%27|%22|%60|%3C|%3E)(?:%[0-9a-fA-F]{2}|[^&%]){0,80}?(?:%20|\+|%0[bB])?(?:style|on[a-z]+|javascript)(?:%3D|%3A|=)(?:%22|%27|%60)
+
+# [U10] alcon.lumaicare.com.log 中绕过拦截的扫描器探测路径
+# 以下路径来自 152.32.187.236 等扫描 IP 的高频探测，与当前站点业务无关，误伤低
+^/eventmanager(?:[/?#]|$)
+^/join_room(?:[/?#]|$)
+^/api/user/ismustmobile(?:[/?#]|$)
+^/api/Uploads/apiimei(?:[/?#]|$)
+^/instatll(?:[/?#]|$)
+^/api/system/systemConfigs/getCustomerServiceLink(?:[/?#]|$)
+^/site/api/v1/site/vipExclusiveDomain/getGuestDomain(?:[/?#]|$)
+^/relayApi/api/notice/site_setting(?:[/?#]|$)
+^/api/chat/visitor/channelInfo(?:[/?#]|$)
+^/api/v[13]/seller/login(?:[/?#]|$)
+^/api/seller/index/GetSellerConfigAll(?:[/?#]|$)
+^/client/api/findConfigByKey(?:[/?#]|$)
+^/memberapi/system/config/get(?:[/?#]|$)
+^/masterControl/getSystemSetting(?:[/?#]|$)
+^/biz/server/config(?:[/?#]|$)
+^/mytio/config/base(?:[/?#]|$)
+^/mfzbs/config/base(?:[/?#]|$)
+^/dock/system/config/get(?:[/?#]|$)
+^/main/config/getkefuData(?:[/?#]|$)
