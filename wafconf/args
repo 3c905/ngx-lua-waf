@@ -173,7 +173,8 @@ __EVENTVALIDATION
 # Rails 质量赋值绕过
 \bparams\[:\w+\]\s*=>
 # Rails 敏感参数
-authenticity_token
+# authenticity_token 为正常 CSRF 参数，拦截会导致 Rails/Django 等框架表单提交失败，已移除
+# authenticity_token
 
 # ========== Go ==========
 # Go 模板注入
@@ -197,7 +198,7 @@ COPY\s+\w+\s+(?:TO|FROM)\s+PROGRAM
 # MongoDB 未授权访问 / 危险操作
 \.runCommand\s*\(\s*\{\s*"?(?:hostInfo|listDatabases|getCmdLineOpts|shutdownServer)
 # Nacos 默认 accessKey
-accessKey=\w+
+# accessKey=\w+ 会误伤阿里云/AWS 等正常 API 的 accessKey 参数，已移除；保留 Nacos 专属特征
 nacos\.core\.auth\.plugin\.nas\.
 # ZooKeeper 四字命令
 ^/(?:envi|ruok|stat|mntr|conf|dump|wchs|wchc|srst|crst|cons|kill)$
@@ -205,10 +206,11 @@ nacos\.core\.auth\.plugin\.nas\.
 # ========== 2026 CVE 漏洞参数特征 ==========
 
 # 通用路径穿越序列（覆盖 CVE-2025-71333 / CVE-2026-5192 等）
-\.\./
-\.\.\\
-%2e%2e(/|%2f|%252f)
-%252e%252e(/|%2f|%252f)
+# 注意：\.\./、\.\.\\ 已由 traversal() 函数覆盖；%2e%2e、%252e%252e 已在上方路径穿越规则中覆盖，此处去重
+# \.\./
+# \.\.\\
+# %2e%2e(/|%2f|%252f)
+# %252e%252e(/|%2f|%252f)
 
 # CVE-2026-5192: Forminator 文件路径穿越（upload-X[file][file_path] 指向系统文件）
 # CVE-2026-21858: n8n filepath 参数绝对路径读取

@@ -21,7 +21,8 @@
 # 常见爬虫/数据采集工具
 
 # [UA2] 常见爬虫 / 数据采集（新增 python-httpx）
-(cdn-detect|SemrushBot|pyspider|Scrapy|python-requests|python-httpx|Python-urllib|HTTrack|harvest|Parser|libwww|BBBike|PycURL|zmeu|BabyKrokodil|httperf|SF/|Office)
+# Office 仅匹配 Microsoft Office，避免误伤含 "Office" 子串的自定义 UA
+(cdn-detect|SemrushBot|pyspider|Scrapy|python-requests|python-httpx|Python-urllib|HTTrack|harvest|Parser|libwww|BBBike|PycURL|zmeu|BabyKrokodil|httperf|SF/|Microsoft\s+Office)
 
 
 
@@ -29,7 +30,8 @@
 
 # Web 漏洞扫描器
 
-(nikto|acunetix|masscan|wpscan|sqlmap|w3af|owasp|fimap|havij|netsparker|dirbuster|pangolin|sqln|-scan|audit|hydra|libredtail)
+# 带词边界，避免命中 "audit"、"-scan" 等子串
+(nikto|acunetix|masscan|wpscan|sqlmap|w3af|owasp|fimap|havij|netsparker|dirbuster|pangolin|sqln|hydra|libredtail|\-scan\b|\baudit\b)
 
 
 
@@ -96,5 +98,5 @@
 ^Mozilla/5\.0\s+AppleWebKit/\d+\.\d+\s+\(KHTML,\s*like\s*Gecko\)\s+Chrome/\d+\.\d+\.\d+\.\d+\s+Safari/\d+\.\d+$
 
 # 日志加固：明确加边界，防止漏过变体（alcon.lumaicare.com.log）
+# 注意：zgrab、go-http-client 已在上文覆盖，此处保留边界加固
 \bzgrab\b
-\bgo-http-client\b

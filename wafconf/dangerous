@@ -153,18 +153,7 @@
 
 # ========== 2026 年新增 CVE 漏洞防御 ==========
 # 针对最新公开 CVE 的可利用端点/路径，误伤可控
-
-# CVE-2026-0768 / ZDI-26-034: Langflow /validate code 参数 RCE
-^/validate(?:[/?#]|$)
-
-# CVE-2025-71327: Flowise 未授权注册
-^/api/v1/account/register(?:[/?#]|$)
-
-# CVE-2025-71333 / CVE-2025-71334: Flowise 文件上传/任意文件读取
-^/api/v1/attachments(?:/.*)?$
-^/api/v1/chatflows(?:[/?#]|$)
-^/api/v1/get-upload-file(?:[/?#]|$)
-^/api/v1/openai-assistants-file/download(?:[/?#]|$)
+# 注意：/validate、/api/v1/account/register 等为通用业务路径，已移至 [aggressive]
 
 # CVE-2026-2827: Open User Map PRO oum_location_notification XSS（GET 参数场景）
 ^/wp-admin/admin-ajax\.php\?.*oum_location_notification
@@ -261,7 +250,7 @@ umeditor\.config\.js$
 
 # Apache Airflow
 ^/api/v1/dags(?:/.*)?$
-^/admin(?:/.*)?$
+# ^/admin(?:/.*)?$ 为通用后台路径，已集中移至 [aggressive]
 
 # Apache Spark
 ^/jobs(?:/.*)?$
@@ -338,8 +327,9 @@ bash\.exe
 
 # Java 常见中间件/框架 CVE 路径
 # Apache Struts2 RCE (CVE-2017-5638 / CVE-2020-17530 / S2-045 / S2-061)
-\.action(?:[/?#]|$)
-\.do(?:[/?#]|$)
+# .action/.do 为大量 Java 框架通用后缀，在 core 中会误伤正常 Struts 应用，已移至 [aggressive]
+# \.action(?:[/?#]|$)
+# \.do(?:[/?#]|$)
 # Apache Shiro (CVE-2016-4437) - rememberMe 反序列化，signature in cookie
 ^/shiro$
 # Fastjson / Jackson 反序列化 - signatures in args/cookie
@@ -363,7 +353,7 @@ bash\.exe
 
 # Node.js 常见框架/应用后台
 # Strapi Admin
-^/admin(?:/.*)?$
+# ^/admin(?:/.*)?$ 为通用后台路径，误伤高，已集中移至 [aggressive]
 # Ghost Admin
 ^/ghost(?:/.*)?$
 # Node-RED
@@ -400,16 +390,16 @@ bash\.exe
 ^/index\.php\?s=/index/\\\\think.*
 ^/index\.php\?s=captcha$
 
-# WordPress
-^/wp-config\.php$
-^/wp-admin/install\.php$
-^/wp-admin/setup-config\.php$
-^/wp-admin/maint/repair\.php$
-^/wp-content/debug\.log$
-^/wp-includes/wlwmanifest\.xml$
-^/xmlrpc\.php$
-^/wp-json/wp/v2/users(?:/.*)?$
-^/wp-config\.php\.(?:bak|backup|old|orig|save|swp|tmp|temp|dist|sample|example)$
+# WordPress（core 区已覆盖，此处去重）
+# ^/wp-config\.php$
+# ^/wp-admin/install\.php$
+# ^/wp-admin/setup-config\.php$
+# ^/wp-admin/maint/repair\.php$
+# ^/wp-content/debug\.log$
+# ^/wp-includes/wlwmanifest\.xml$
+# ^/xmlrpc\.php$
+# ^/wp-json/wp/v2/users(?:/.*)?$
+# ^/wp-config\.php\.(?:bak|backup|old|orig|save|swp|tmp|temp|dist|sample|example)$
 # WordPress 常见插件漏洞路径
 ^/wp-content/plugins/(?:wp-file-manager|site-import|gravityforms|revslider|mailpoet|woocommerce)/.*\.(?:php\d?|phtml)$
 
@@ -418,9 +408,9 @@ bash\.exe
 ^/user/password$
 ^/admin/config/people/accounts$
 
-# phpMyAdmin / Adminer
-^/phpmyadmin(?:/.*)?$
-^/adminer(?:\.php)?$
+# phpMyAdmin / Adminer（core 区已覆盖，此处去重）
+# ^/phpmyadmin(?:/.*)?$
+# ^/adminer(?:\.php)?$
 
 # Magento / Adobe Commerce
 ^/rest/V1/(?:integration/admin/token|integration/customer/token)$
@@ -452,7 +442,7 @@ bash\.exe
 # Python 技术栈敏感端点 / CVE
 
 # Django
-^/admin(?:/.*)?$
+# ^/admin(?:/.*)?$ 为通用后台路径，误伤高，已集中移至 [aggressive]
 ^/django-admin(?:/.*)?$
 # Django REST Framework 可浏览 API 登录（信息泄露 + 潜在越权入口）
 ^/api-auth(?:/.*)?$
@@ -465,8 +455,8 @@ bash\.exe
 
 # FastAPI 文档接口（信息泄露）
 ^/docs$
-^/redoc$
-^/openapi\.json$
+# ^/redoc$ 与 core Swagger/OpenAPI 规则重复，已移除
+# ^/openapi\.json$ 与 core Swagger/OpenAPI 规则重复，已移除
 
 # Tornado / Web2py / Bottle
 ^/admin/default/index$
@@ -486,11 +476,11 @@ bash\.exe
 # Go 技术栈敏感端点 / CVE
 
 # Go pprof 性能分析接口
-^/debug/pprof(?:/.*)?$
+# ^/debug/pprof(?:/.*)?$ 已在 core 调试工具规则中覆盖，已移除
 
 # 常见 Go 框架后台/调试
 # Gin / Echo / Beego / Revel / Iris
-^/admin(?:/.*)?$
+# ^/admin(?:/.*)?$ 为通用后台路径，误伤高，已集中移至 [aggressive]
 ^/swagger(?:/.*)?$
 ^/api/v1/swagger(?:/.*)?$
 
@@ -506,22 +496,25 @@ bash\.exe
 ^/error\.aspx$
 
 # ASP.NET WebForms 资源处理程序
-^/WebResource\.axd$
-^/ScriptResource\.axd$
+# 正常 ASP.NET WebForms 应用依赖这些 handler，拦截会导致页面崩溃，已移至 [aggressive]
+# ^/WebResource\.axd$
+# ^/ScriptResource\.axd$
 
 # WCF / ASMX / WCF REST
-^/.*\.svc(?:/.*)?$
-^/.*\.asmx(?:/.*)?$
+# .svc/.asmx 为正常 WebService 端点，误伤高，已移至 [aggressive]
+# ^/.*\.svc(?:/.*)?$
+# ^/.*\.asmx(?:/.*)?$
 
 # .NET Core / ASP.NET Core 通用路径
-^/\.well-known/(?:openid-configuration|jwks\.json)$
-^/identity/(?:account/(?:login|register|manage)|connect/token)(?:/.*)?$
+# OIDC / OAuth2 标准发现端点，拦截会导致认证失效，已移至 [aggressive]
+# ^/\.well-known/(?:openid-configuration|jwks\.json)$
+# ^/identity/(?:account/(?:login|register|manage)|connect/token)(?:/.*)?$
 
 # [ruby]
 # Ruby / Rails 技术栈敏感端点 / CVE
 
 # Rails 后台 / 调试
-^/admin(?:/.*)?$
+# ^/admin(?:/.*)?$ 为通用后台路径，误伤高，已集中移至 [aggressive]
 ^/active_admin(?:/.*)?$
 ^/sidekiq(?:/.*)?$
 
@@ -558,8 +551,8 @@ bash\.exe
 ^/v2/.*/blobs/.*$
 
 # Harbor
-^/harbor/sign-in$
-^/api/v2\.0/users$
+# ^/harbor/sign-in$ 与上方 Harbor 规则重复（上方无 $ 锚点但范围更广），已移除
+# ^/api/v2\.0/users$ 与上方 Harbor 规则重复，已移除
 ^/api/v2\.0/projects(?:/.*)?$
 
 # Istio
@@ -580,7 +573,7 @@ bash\.exe
 ^/v1/acl(?:/.*)?$
 
 # HashiCorp Nomad
-^/v1/agent(?:/.*)?$
+# ^/v1/agent(?:/.*)?$ 与 Consul 规则重复，已移除
 ^/v1/jobs(?:/.*)?$
 
 # Rancher
@@ -602,8 +595,8 @@ bash\.exe
 # 数据库管理后台 / 监控 / CVE
 
 # MySQL
-^/phpmyadmin(?:/.*)?$
-^/phpMyAdmin(?:/.*)?$
+# ^/phpmyadmin(?:/.*)?$ 已在 core 覆盖（case-insensitive），已移除
+# ^/phpMyAdmin(?:/.*)?$ 与 core 规则重复，已移除
 ^/mysqladmin(?:/.*)?$
 ^/pma(?:/.*)?$
 
@@ -613,7 +606,7 @@ bash\.exe
 
 # Redis
 ^/redis(?:/.*)?$
-^/redisinsight(?:/.*)?$
+# ^/redisinsight(?:/.*)?$ 已在 core 覆盖，已移除
 ^/redis-commander(?:/.*)?$
 ^/redmin(?:/.*)?$
 
@@ -805,6 +798,30 @@ bash\.exe
 
 # K8s / Helm / Ansible
 (?:^|/)(?:Chart\.ya?ml|values(?:-[A-Za-z0-9_.-]+)?\.ya?ml|kustomization\.ya?ml|helmfile\.ya?ml|ansible\.cfg|inventory(?:\.ini)?|playbook\.ya?ml)(?:[/?#]|$)
+
+# 2026 CVE / 通用业务路径误伤高，已集中移至 aggressive
+# CVE-2026-0768 / ZDI-26-034: Langflow /validate code 参数 RCE
+^/validate(?:[/?#]|$)
+# CVE-2025-71327: Flowise 未授权注册
+^/api/v1/account/register(?:[/?#]|$)
+# CVE-2025-71333 / CVE-2025-71334: Flowise 文件上传/任意文件读取
+^/api/v1/attachments(?:/.*)?$
+^/api/v1/chatflows(?:[/?#]|$)
+^/api/v1/get-upload-file(?:[/?#]|$)
+^/api/v1/openai-assistants-file/download(?:[/?#]|$)
+# Apache Struts2 通用后缀（正常 Struts 应用会误伤）
+\.action(?:[/?#]|$)
+\.do(?:[/?#]|$)
+# ASP.NET WebForms / WCF / ASMX（正常 .NET 应用会误伤）
+^/WebResource\.axd$
+^/ScriptResource\.axd$
+^/.*\.svc(?:/.*)?$
+^/.*\.asmx(?:/.*)?$
+# OIDC / OAuth2 标准端点（拦截会导致登录失效）
+^/\.well-known/(?:openid-configuration|jwks\.json)$
+^/identity/(?:account/(?:login|register|manage)|connect/token)(?:/.*)?$
+# 通用后台入口（各框架重复，误伤高）
+^/admin(?:/.*)?$
 
 # URI 路径 SQL 注入探测
 (EXTRACTVALUE|EXTRACT_VALUE|UPDATEXML|/\*!\d{5}|SLEEP\s*\(|BENCHMARK\s*\(|INTO\s+(OUT|DUMP)FILE|information_schema)

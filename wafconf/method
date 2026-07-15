@@ -15,7 +15,8 @@
 
 # 3. RAT / 远控木马常见通信特征
 # RAT/远控木马常见方法前缀
-(CHECK|DEBUG|HELP|INFO|OPTIONS|PUT|PRI)
+# 注意：OPTIONS、PUT 为标准 HTTP 方法，已在下方排除，避免误伤 CORS/REST
+(CHECK|DEBUG|HELP|INFO|PRI)
 
 # 二进制协议探测（如 MS SQL TDS Pre-Login 包伪装成 HTTP 方法）
 ^[\x00-\x1f]
@@ -25,7 +26,8 @@
 # mstshash=hello 是 RDP 预登录包特征；空方法常见于批量探测
 mstshash
 ^\s*$
-^CONNECT$
+# CONNECT 为 HTTP 代理/HTTPS 隧道标准方法，正常代理场景会误伤，默认关闭
+# ^CONNECT$
 
 # 日志加固：Nginx 日志中以 \\xNN 形式记录的二进制协议方法
 # 实际运行时也可能直接收到原始控制字节（已由 ^[\\x00-\\x1f] 覆盖）
