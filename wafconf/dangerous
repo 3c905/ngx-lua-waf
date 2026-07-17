@@ -87,7 +87,7 @@
 # 以下规则针对日志中实际绕过并返回 301/200 的扫描请求，误伤低
 
 # AI / LLM API 探测（OpenAI 兼容接口扫描）
-^/v1/(?:models|completions|chat/completions|embeddings|fine-tunes)(?:[/?#]|$)
+# LLM 网关/代理站点（one-api、new-api 等）这些路径即正常业务，已与下方 [ai] 规则合并移至 [aggressive]
 
 # 非隐藏 env 文件变体（/env、/aws.env、/env/prod.env 等）
 ^/(?:env|aws\.env|mongodb\.env|database\.env|db\.env|mysql\.env|postgres\.env|redis\.env|azure\.env|heroku\.env)(?:[/?#]|$)
@@ -174,14 +174,14 @@
 ^/actuator/gateway/routes/.+$
 
 # Spring Data REST SpEL RCE (CVE-2017-8046)
-^/users/\d+$
+# ^/users/\d+$ 为通用 REST 路由（GET /users/123），误伤高，已移至 [aggressive]
 # Spring Framework RCE via Data Binding (CVE-2022-22965) - signature in args
 # Spring Cloud Function SpEL RCE (CVE-2022-22963)
 ^/functionRouter$
 # Spring Boot Actuator jolokia / logfile / env / shutdown 等高敏感端点
 ^/actuator/(jolokia|logfile|trace|dump|shutdown|restart|sessions|flyway|liquibase)$
 # Spring Boot whitelabel error page not a CVE but info leak
-^/error$
+# ^/error$ 与业务错误页路由冲突，已移至 [aggressive]
 
 # WebLogic
 ^/ws_utc/config\.do$
@@ -228,13 +228,12 @@ umeditor\.config\.js$
 ^/securityRealm/user/admin/search/index
 
 # GitLab
-^/explore$
-^/api/v4/users$
+# ^/explore$、^/api/v4/users$ 为通用业务名词路径，已移至 [aggressive]
 ^/.git/config$
 
 # Confluence / Jira
 ^/confluence(?:/.*)?$
-^/wiki(?:/.*)?$
+# ^/wiki(?:/.*)?$ 与站点自带 wiki/文档路由冲突，已移至 [aggressive]
 ^/secure/ViewUserInfo\.(?:jsp|action)$
 ^/rest/api/2/user
 
@@ -245,15 +244,15 @@ umeditor\.config\.js$
 
 # Grafana
 ^/api/datasources(?:/.*)?$
-^/api/admin(?:/.*)?$
-^/metrics$
+# ^/api/admin(?:/.*)?$ 为通用后台路径，已移至 [aggressive]
+# ^/metrics$ 与 [aggressive] 区的 ^/metrics(?:/.*)?$ 重复，已移除（监控场景按需开启 aggressive）
 
 # Apache Airflow
 ^/api/v1/dags(?:/.*)?$
 # ^/admin(?:/.*)?$ 为通用后台路径，已集中移至 [aggressive]
 
 # Apache Spark
-^/jobs(?:/.*)?$
+# ^/jobs(?:/.*)?$ 与招聘/职位页面路由冲突（/jobs 为最常见业务路由之一），已移至 [aggressive]
 ^/app/history(?:/.*)?$
 
 # Harbor
@@ -261,11 +260,10 @@ umeditor\.config\.js$
 ^/harbor/sign-in
 
 # ArgoCD
-^/api/v1/session$
-^/applications(?:/.*)?$
+# ^/api/v1/session$、^/applications(?:/.*)?$ 为通用 API 名词路径，已移至 [aggressive]
 
 # RabbitMQ Management
-^/api/(?:whoami|overview|connections|channels|exchanges|queues|bindings)(?:/.*)?$
+# ^/api/(whoami|overview|connections|channels|...) 与业务 API 名词大量冲突（/api/channels 等），已移至 [aggressive]
 
 # RedisInsight / phpMyAdmin / Adminer
 ^/redisinsight(?:/.*)?$
@@ -321,7 +319,7 @@ bash\.exe
 ^/h2-console(?:/.*)?$
 ^/jolokia(?:/.*)?$
 ^/sba(?:/.*)?$
-^/instances(?:/.*)?$
+# ^/instances(?:/.*)?$ 与云计算平台实例管理路由冲突，已移至 [aggressive]
 ^/monitoring$
 ^/javamelody(?:/.*)?$
 
@@ -363,7 +361,7 @@ bash\.exe
 # Express status-monitor
 ^/status-monitor(?:/.*)?$
 # Node.js 应用源码映射
-^/[^/]+\.js\.map$
+# ^/[^/]+\.js\.map$ 许多站点有意公开 SourceMap 便于前端调试，已移至 [aggressive]
 # NPM package.json / node_modules 已在 core 依赖目录规则覆盖
 # Express error page
 ^/\\?__proto__
@@ -448,19 +446,19 @@ bash\.exe
 ^/api-auth(?:/.*)?$
 
 # Flask Debug Pin bypass / Werkzeug console
-^/console$
+# ^/console$ 与业务控制台路由冲突（各类 admin console），已移至 [aggressive]
 ^/__debugger__(?:/.*)?$
 # Flask-DebugToolbar
 ^/_debug_toolbar(?:/.*)?$
 
 # FastAPI 文档接口（信息泄露）
-^/docs$
+# ^/docs$ 与文档站点路由冲突（/docs 为最常见业务路由之一），已移至 [aggressive]
 # ^/redoc$ 与 core Swagger/OpenAPI 规则重复，已移除
 # ^/openapi\.json$ 与 core Swagger/OpenAPI 规则重复，已移除
 
 # Tornado / Web2py / Bottle
 ^/admin/default/index$
-^/examples/\w+$
+# ^/examples/\w+$ 与教程/示例页面路由冲突，已移至 [aggressive]
 
 # Zope / Plone / Odoo
 ^/manage_main$
@@ -468,8 +466,7 @@ bash\.exe
 ^/web/database/manager$
 
 # Supervisor / Celery / Flower
-^/supervisor(?:/.*)?$
-^/flower(?:/.*)?$
+# ^/supervisor(?:/.*)?$、^/flower(?:/.*)?$ 与业务路由冲突（/flower 花店类站点等），已移至 [aggressive]
 ^/celery-\w+(?:/.*)?$
 
 # [go]
@@ -481,8 +478,7 @@ bash\.exe
 # 常见 Go 框架后台/调试
 # Gin / Echo / Beego / Revel / Iris
 # ^/admin(?:/.*)?$ 为通用后台路径，误伤高，已集中移至 [aggressive]
-^/swagger(?:/.*)?$
-^/api/v1/swagger(?:/.*)?$
+# ^/swagger(?:/.*)?$、^/api/v1/swagger(?:/.*)?$ 与 .NET Swashbuckle 等公开 API 文档冲突，已移至 [aggressive]
 
 # Go 应用源码/锁文件泄露
 ^/go\.(?:mod|sum|work)(?:[/?#]|$)
@@ -493,7 +489,7 @@ bash\.exe
 # ASP.NET 经典调试/错误页
 ^/trace\.axd$
 ^/elmah\.axd$
-^/error\.aspx$
+# ^/error\.aspx$ 与 ASP.NET 自定义错误页路由冲突，已移至 [aggressive]
 
 # ASP.NET WebForms 资源处理程序
 # 正常 ASP.NET WebForms 应用依赖这些 handler，拦截会导致页面崩溃，已移至 [aggressive]
@@ -534,7 +530,8 @@ bash\.exe
 # 云原生 / Kubernetes / 容器平台敏感端点
 
 # Kubernetes API Server
-^/api/v1/(?:namespaces|pods|nodes|services|endpoints|configmaps|secrets|serviceaccounts)(?:/.*)?$
+# （services|endpoints 为业务 API 常见名词，已从下方规则拆出移至 [aggressive]）
+^/api/v1/(?:namespaces|pods|nodes|configmaps|secrets|serviceaccounts)(?:/.*)?$
 ^/apis/(?:apps|rbac|networking\.k8s\.io|extensions)/v1(?:beta1)?(?:/.*)?$
 
 # Kubernetes Dashboard
@@ -563,33 +560,28 @@ bash\.exe
 ^/alertmanager(?:/.*)?$
 
 # HashiCorp Vault
-^/v1/auth(?:/.*)?$
+# ^/v1/auth(?:/.*)?$ 与业务认证 API 路由冲突（/v1/auth/login 极常见），已移至 [aggressive]
 ^/v1/sys(?:/.*)?$
 
 # HashiCorp Consul
-^/v1/agent(?:/.*)?$
-^/v1/catalog(?:/.*)?$
-^/v1/kv(?:/.*)?$
-^/v1/acl(?:/.*)?$
+# ^/v1/(agent|catalog|kv|acl)(?:/.*)?$ 与业务 API 名词冲突（/v1/catalog 电商目录、/v1/kv 存储接口等），已移至 [aggressive]
 
 # HashiCorp Nomad
-# ^/v1/agent(?:/.*)?$ 与 Consul 规则重复，已移除
-^/v1/jobs(?:/.*)?$
+# ^/v1/jobs(?:/.*)?$ 与职位类 API 路由冲突，已移至 [aggressive]
 
 # Rancher
-^/v3(?:/.*)?$
+# ^/v3(?:/.*)?$ 会拦截所有 v3 版本业务 API，已移至 [aggressive]
 ^/k8s/clusters(?:/.*)?$
 
 # Portainer
-^/api/endpoints(?:/.*)?$
-^/api/auth(?:/.*)?$
+# ^/api/endpoints(?:/.*)?$、^/api/auth(?:/.*)?$ 与通用认证 API 冲突（NextAuth 默认即 /api/auth/*），已移至 [aggressive]
 
 # AWX / Ansible Tower
-^/api/v2/(?:jobs|job_templates|credentials|inventories|projects|organizations|users)(?:/.*)?$
+# ^/api/v2/(jobs|users|projects|...) 与通用 v2 API 名词冲突，已移至 [aggressive]
 
 # [ai]
 # [D24] AI / LLM 服务 API 探测（非 AI 站点的 OpenAI 兼容接口扫描）
-^/v1/(?:models|embeddings|chat/completions|completions|images|audio|files|fine-tunes|batches|assistants|threads|vector_stores|moderations|realtime)$
+# LLM 网关/代理站点这些路径即正常业务，已统一移至 [aggressive]
 
 # [database]
 # 数据库管理后台 / 监控 / CVE
@@ -625,20 +617,20 @@ bash\.exe
 ^/_nodes(?:/.*)?$
 
 # ClickHouse
-^/play(?:/.*)?$
+# ^/play(?:/.*)?$ 与播放/游戏页面路由冲突，已移至 [aggressive]
 ^/clickhouse(?:/.*)?$
 
 # InfluxDB
 ^/influxdb(?:/.*)?$
 
 # TiDB
-^/dashboard(?:/.*)?$
+# ^/dashboard(?:/.*)?$ 与用户仪表盘路由冲突（/dashboard 为最常见业务路由之一），已移至 [aggressive]
 
 # CockroachDB
 ^/_admin(?:/.*)?$
 
 # Neo4j
-^/browser(?:/.*)?$
+# ^/browser(?:/.*)?$ 与文件浏览器类业务路由冲突，已移至 [aggressive]
 ^/neo4j(?:/.*)?$
 
 # Cassandra
@@ -671,9 +663,7 @@ bash\.exe
 ^/nacos(?:/.*)?$
 
 # Apollo
-^/apollo(?:/.*)?$
-^/config(?:/.*)?$
-^/portal(?:/.*)?$
+# ^/apollo(?:/.*)?$、^/config(?:/.*)?$、^/portal(?:/.*)?$ 均为通用业务名词（门户/配置页/品牌页），已移至 [aggressive]
 
 # ZooKeeper
 ^/zookeeper(?:/.*)?$
@@ -702,7 +692,7 @@ bash\.exe
 
 # HAProxy
 ^/haproxy(?:/.*)?$
-^/stats(?:/.*)?$
+# ^/stats(?:/.*)?$ 与统计分析页面路由冲突，已移至 [aggressive]
 
 # Memcached
 ^/memcached(?:/.*)?$
@@ -825,3 +815,60 @@ bash\.exe
 
 # URI 路径 SQL 注入探测
 (EXTRACTVALUE|EXTRACT_VALUE|UPDATEXML|/\*!\d{5}|SLEEP\s*\(|BENCHMARK\s*\(|INTO\s+(OUT|DUMP)FILE|information_schema)
+
+# ========== 通用业务名词路径（2026-07 从 core 移入，降低误伤）==========
+# 以下路径为中间件/管理平台的默认入口，但同时也是常见业务路由，
+# 在 core 中会误伤正常业务（如 /dashboard、/docs、/jobs、/api/auth/*）。
+# 确认站点无对应业务后，开启 BlockAggressive 即可恢复拦截。
+
+# Spring 生态
+^/users/\d+$
+^/error$
+^/error\.aspx$
+
+# GitLab / Confluence
+^/explore$
+^/api/v4/users$
+^/wiki(?:/.*)?$
+
+# Grafana / Spark
+^/api/admin(?:/.*)?$
+^/jobs(?:/.*)?$
+
+# ArgoCD / RabbitMQ / Portainer
+^/api/v1/session$
+^/applications(?:/.*)?$
+^/api/(?:whoami|overview|connections|channels|exchanges|queues|bindings)(?:/.*)?$
+^/api/endpoints(?:/.*)?$
+^/api/auth(?:/.*)?$
+
+# Vault / Consul / Nomad / Rancher / AWX / K8s services
+^/v1/auth(?:/.*)?$
+^/v1/(?:agent|catalog|kv|acl)(?:/.*)?$
+^/v1/jobs(?:/.*)?$
+^/v3(?:/.*)?$
+^/api/v1/(?:services|endpoints)(?:/.*)?$
+^/api/v2/(?:jobs|job_templates|credentials|inventories|projects|organizations|users)(?:/.*)?$
+
+# 数据库/中间件管理台的通用名词路径
+^/play(?:/.*)?$
+^/dashboard(?:/.*)?$
+^/browser(?:/.*)?$
+^/apollo(?:/.*)?$
+^/config(?:/.*)?$
+^/portal(?:/.*)?$
+^/stats(?:/.*)?$
+
+# 框架调试/文档/示例通用路径
+^/console$
+^/docs$
+^/examples/\w+$
+^/supervisor(?:/.*)?$
+^/flower(?:/.*)?$
+^/swagger(?:/.*)?$
+^/api/v1/swagger(?:/.*)?$
+^/instances(?:/.*)?$
+^/[^/]+\.js\.map$
+
+# AI / LLM OpenAI 兼容接口探测（合并原 core 与 [ai] 规则；LLM 网关站点勿开启 aggressive）
+^/v1/(?:models|embeddings|chat/completions|completions|images|audio|files|fine-tunes|batches|assistants|threads|vector_stores|moderations|realtime)$

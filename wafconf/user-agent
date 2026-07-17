@@ -75,7 +75,12 @@
 
 # 开发工具/命令行客户端
 
-(curl|wget|ApacheBench|httpie|PostmanRuntime|Insomnia|node-fetch|Go-http-client|Java|okhttp|Dart)
+(curl|wget|ApacheBench|httpie|PostmanRuntime|Insomnia)
+
+# 以下为常见应用开发框架默认 UA：站点若有官方 App / 微服务 / 第三方 API 调用会被误伤
+# （okhttp=Android 标准 HTTP 客户端，Dart=Flutter 应用，Java=Java 后端，Go-http-client=Go 微服务），
+# 已从默认黑名单移除；确认无此类业务后可恢复启用：
+# (node-fetch|Go-http-client|Java|okhttp|Dart)
 
 
 

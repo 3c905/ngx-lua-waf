@@ -42,7 +42,9 @@ CCrate="120/60"
 
 -- 【block-dangerous.conf 合并规则】
 -- core   = 低误伤：Git/密钥/凭证/配置文件/技术栈敏感端点（建议所有场景开启）
--- aggressive = 高误伤：health/metrics/debug/test/txt/py/sh/java/map（按需开启）
+-- aggressive = 高误伤：health/metrics/debug/test/txt/py/sh/java/map、
+--              通用业务名词路径（/dashboard、/docs、/jobs、/api/auth 等）、
+--              header 转发头 X-Forwarded-*（按需开启）
 BlockDangerous="on"
 BlockAggressive="off"
 

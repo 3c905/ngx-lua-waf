@@ -5,10 +5,13 @@
 # 这些头在 CDN/SLB/反向代理场景必然存在，应在 config.lua 中通过 TrustedProxies 管理信任链。
 
 # HTTP 请求走私：Content-Length 与 Transfer-Encoding 同时存在
-^(?:Content-Length:.+\n.*Transfer-Encoding|Transfer-Encoding:.+\n.*Content-Length):
+# 注意：逐头匹配无法跨行（单头内没有 \n），该规则永远不生效，
+# 已改为 init.lua headers() 中的代码检测（两个头同时出现即拦截）
 
 # 请求走私：Transfer-Encoding 值混淆
-^Transfer-Encoding:\s*(chunk\s*ed|chu[nk]ked|\\x0[9a]chunked|identity)
+# 原规则 chunk\s*ed / chu[nk]ked 会命中正常的 "chunked"（所有分块上传被误杀），
+# 改为负向断言：仅放行精确的 chunked，其余值（identity、chunk ed、chuncked 等混淆）一律拦截
+^Transfer-Encoding:\s*(?!chunked\s*$)\S+
 
 # Header 注入攻击（限定高危载荷，带词边界减少误伤）
 # SQL 时间盲注
@@ -44,6 +47,8 @@ mstshash
 ^x-middleware-override-headers:
 
 # [aggressive]
+# 本区规则仅在 BlockAggressive="on" 时生效（init.lua headers() 按标签过滤）
+# 此前本区规则无条件生效，导致 CDN/反代后所有携带 X-Forwarded-* 的请求被误杀
 
 # 激进模式：所有 X-Forwarded-* 头（正常反向代理场景会误伤）
 ^X-Forwarded-

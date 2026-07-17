@@ -224,7 +224,7 @@ ckrules = read_rule('cookie')
 dgrules = read_tagged_rule('dangerous')
 refererrules = read_rule('referer')
 methodrules = read_rule('method')
-headerrules = read_rule('header')
+headerrules = read_tagged_rule('header')
 responserules = read_rule('response')
 
 -- 规则加载汇总日志（方便排查规则文件是否加载成功）
@@ -668,12 +668,24 @@ end
 function headers()
     if BlockHeaderCheck then
         local headers = ngx.req.get_headers()
+        -- 请求走私：Content-Length 与 Transfer-Encoding 同时出现（RFC 7230 禁止，浏览器/curl 不会发送）
+        if headers["content-length"] and headers["transfer-encoding"] then
+            log('GET', ngx.var.request_uri, "-", "[HEADER][403] hit=[CL+TE] request_smuggling")
+            if should_block("HeaderAction") then
+                return say_html()
+            end
+            return true
+        end
         for hname, hval in pairs(headers) do
             if type(hval) == "table" then
                 hval = table.concat(hval, ", ")
             end
-            for _, rule in pairs(headerrules or {}) do
-                if rule ~= "" then
+            for _, item in pairs(headerrules or {}) do
+                local rule = item.rule
+                local tag = item.tag
+                if not BlockAggressiveCheck and tag == "aggressive" then
+                    -- 激进规则已关闭，跳过
+                elseif rule ~= "" then
                     local target = tostring(hname) .. ": " .. tostring(hval)
                     local m = cache.match_cached(target, rule, "isj")
                     if m then
@@ -734,7 +746,7 @@ function _G.waf_reload_rules()
     dgrules = read_tagged_rule('dangerous')
     refererrules = read_rule('referer')
     methodrules = read_rule('method')
-    headerrules = read_rule('header')
+    headerrules = read_tagged_rule('header')
     responserules = read_rule('response')
     -- 刷新文件扩展名黑名单集合（config 可能已更新）
     file_ext_blacklist_set = nil

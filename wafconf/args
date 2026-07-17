@@ -2,8 +2,8 @@
 # 原则：每条规则尽量带词边界，优先拦截“语法结构”而非“常见单词”
 
 # ========== 路径穿越 ==========
-# 基础路径穿越
-code(\.\.(/|%2f|%252f))+
+# 基础路径穿越（修复原规则误带 "code" 前缀导致几乎不生效的问题）
+(\.\.(/|%2f|%252f))+
 # URL 编码穿越
 %2e%2e(/|%2f|%252f)
 %252e%252e(/|%2f|%252f)
@@ -15,14 +15,16 @@ code(\.\.(/|%2f|%252f))+
 \x00
 
 # ========== SQL 注入 ==========
-# 带词边界的基本 SQL 关键字组合
-(?<!\w)\bselect\b.+\bfrom\b(?!\w)
+# 高置信特征：union 联合查询（自然语言中罕见，保留）
 (?<!\w)\bunion\s+(all\s+)?select\b(?!\w)
-(?<!\w)\binsert\s+into\b(?!\w)
-(?<!\w)\bdelete\s+from\b(?!\w)
-(?<!\w)\bupdate\s+.+\s+set\b(?!\w)
-(?<!\w)\bdrop\s+table\b(?!\w)
-(?<!\w)\balter\s+table\b(?!\w)
+# DML 语句要求引号/括号/分号等注入上下文，避免命中自然语言
+# （如 "please select a date from the list"、"remember to update and set..."）
+['"`(;]\s*\bselect\b\s+[^\n]{1,300}?\bfrom\b
+['"`);]\s*\binsert\s+into\b
+['"`);]\s*\bdelete\s+from\b
+['"`);]\s*\bupdate\b[^\n]{1,200}?\bset\b
+['"`);]\s*\bdrop\s+table\b
+['"`);]\s*\balter\s+table\b
 # 写文件
 (?<!\w)into\s+(outfile|dumpfile)\s+
 # 读文件
@@ -43,8 +45,8 @@ code(\.\.(/|%2f|%252f))+
 # 报错注入
 (?<!\w)extractvalue\s*\(
 (?<!\w)updatexml\s*\(
-# 堆叠查询
-;\s*(drop|delete|insert|update|create|alter)\s+
+# 堆叠查询（限定 SQL 对象关键字，避免自然语言分号误伤）
+;\s*(?:drop\s+table|delete\s+from|insert\s+into|update\s+[^\s]+\s+set|create\s+table|alter\s+table)
 # 十六进制拼接（提高阈值，避免命中颜色/短哈希）
 (?:=|\s|,|\()0x[0-9a-fA-F]{16,}(?=\s*[,)])
 # MySQL 版本注释
@@ -77,8 +79,8 @@ php://input
 \$_(?:GET|POST|REQUEST|COOKIE|FILES|SERVER)\[[^\]]+\]\s*\)\s*;
 
 # ========== SSRF / 伪协议 ==========
-# 危险伪协议
-(?<!\w)(?:file|gopher|dict|ldap|ftp|phar|glob|zlib|tftp|imap|smtp|pop3):/+[^\n]+
+# 危险伪协议（移除 ftp://：正常内容中常见，且 SSRF 利用价值远低于 gopher/file）
+(?<!\w)(?:file|gopher|dict|ldap|phar|glob|zlib|tftp|imap|smtp|pop3):/+[^\n]+
 # 元数据与内网目标
 (?:^|://)(?:169\.254\.169\.254|metadata\.google\.internal|metadata\.tencentyun\.com|100\.100\.100\.200|metadata\.aliyun\.com|instance-data|metadata\.aws)(?:[:/]|$)
 # RFC1918 内网 IP
@@ -89,8 +91,8 @@ php://input
 # ========== XSS ==========
 # 高危标签
 <\s*(?:script|iframe|object|embed|base|form)\b
-# 事件处理器
-(?:^|[^a-z0-9])(on\w+)\s*=
+# 事件处理器（= 前不允许空格，避免 "one = ..." 类自然语言误伤）
+(?:^|[^a-z0-9])on\w+=
 # SVG/MathML on 事件
 <\s*(?:svg|math)\s+on\w+
 # iframe srcdoc
@@ -159,8 +161,10 @@ xwork\.MethodAccessor
 
 # ========== .NET / ASP.NET ==========
 # ViewState 反序列化 / 未加密状态
-__VIEWSTATE
-__EVENTVALIDATION
+# __VIEWSTATE / __EVENTVALIDATION 为 ASP.NET WebForms 正常字段名，拦截会导致 WebForms 请求失败，已注释
+# （ViewState 反序列化特征已由上方 rO0ABX / AAEAAAD 序列化魔术头覆盖）
+# __VIEWSTATE
+# __EVENTVALIDATION
 # ASP.NET 路径遍历 / 敏感文件
 \.asax$
 \.cshtml$
@@ -184,13 +188,13 @@ html/template
 # ========== Cloud Native ==========
 # Kubernetes API Token / ServiceAccount
  eyJhbGciOiJSUzI1NiIsImtpZCI6
-# 云元数据 API 响应特征
-"accountId"\s*:\s*"\d{12}"
-"instance-id"\s*:
+# 云元数据 API 响应特征（响应侧特征，出现在请求参数中多为云平台控制台等正常业务 JSON，已注释）
+# "accountId"\s*:\s*"\d{12}"
+# "instance-id"\s*:
 
 # ========== Database / Middleware ==========
-# Redis 危险命令
-\b(?:FLUSHALL|FLUSHDB|CONFIG|SAVE|SHUTDOWN|DEBUG|KEYS)\s+
+# Redis 危险命令（要求换行/引号上下文，避免 "save your"、"debug mode"、"keys and" 等自然语言误伤）
+[\n"']\s*(?:FLUSHALL|FLUSHDB|CONFIG|SAVE|SHUTDOWN|DEBUG|KEYS)(?:\s|$)
 # MySQL LOAD DATA LOCAL INFILE
 LOAD\s+DATA\s+LOCAL\s+INFILE
 # PostgreSQL COPY TO/FROM

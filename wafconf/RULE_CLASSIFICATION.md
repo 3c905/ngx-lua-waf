@@ -102,7 +102,8 @@
 | D28 | 激进模式：源码 / 日志 / 备份扩展名 | 误伤风险高 | 技术类站点可能正常提供源码/日志下载 | `\.(java\|class\|jar\|py\|sh\|log\|bak\|backup\|...)$` |
 | D29 | VPN / 远程接入设备探测 | Citrix NetScaler、SSL VPN 接口 | 未授权访问或 CVE 利用 | `^/vpnsvc/connect\.cgi$`、`^/epa/scripts/win/nsepa_setup\.exe$` |
 
-> **说明**：以 `# [core]` 标注的规则为默认启用，误伤较低；以 `# [aggressive]` 标注的规则误伤风险较高，按需启用。
+> **说明**：以 `# [core]` 标注的规则为默认启用，误伤较低；以 `# [aggressive]` 标注的规则误伤风险较高，按需启用（`BlockAggressive=on` 时生效）。
+> 自 2026-07 起，与常见业务路由冲突的通用名词路径（`/dashboard`、`/docs`、`/jobs`、`/api/auth/*`、`/v1/auth`、`/wiki`、`/console`、`/play`、`/stats` 等）也已归入 `[aggressive]`，core 区只保留指向性明确的敏感路径。
 
 ---
 
@@ -118,7 +119,7 @@
 | H3 | Header 注入攻击 | Cookie/User-Agent 等头中植入 SQLi/XSS/JNDI | 把 payload 写入 Header 绕过参数检测 | `sleep\(`、`union\s+select`、`<script`、`\$\{jndi:` |
 | H4 | DoS / 超大请求 | 异常巨大的 Content-Length | 发送超大 Body 耗尽服务端内存/磁盘 | `^Content-Length:\s*(9\d{8}\|\d{10,})` |
 | H5 | CRLF 注入 | 头值中出现换行符 | 注入额外 HTTP 头或分割响应，实施 XSS/缓存投毒 | `\n`、`\r` |
-| H6 | 激进模式：所有转发头 | 全部 X-Forwarded-* 头 | 在可信任反向代理场景下误伤高，默认不建议 | `^X-Forwarded-` |
+| H6 | 激进模式：所有转发头 | 全部 X-Forwarded-* 头 | 在可信任反向代理场景下误伤高，仅 `BlockAggressive=on` 时生效 | `^X-Forwarded-` |
 | H7 | 激进模式：自定义 IP 头 | 所有 `X-.*-IP:` 头 | 部分自定义 IP 头可能用于业务，启用需谨慎 | `^X-.*-IP:` |
 
 ---

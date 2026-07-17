@@ -2,12 +2,16 @@
 # 与 args 共用核心注入规则，但更注重 body 中常见的 payload 形态
 
 # ========== SQL 注入 ==========
-(?<!\w)\bselect\b.+\bfrom\b(?!\w)
+# 高置信特征：union 联合查询（自然语言中罕见，保留）
 (?<!\w)\bunion\s+(all\s+)?select\b(?!\w)
-(?<!\w)\binsert\s+into\b(?!\w)
-(?<!\w)\bdelete\s+from\b(?!\w)
-(?<!\w)\bupdate\s+.+\s+set\b(?!\w)
-(?<!\w)\bdrop\s+table\b(?!\w)
+# DML 语句要求引号/括号/分号等注入上下文，避免命中自然语言
+# （如 "please select a date from the list"、"remember to update and set..."）
+['"`(;]\s*\bselect\b\s+[^\n]{1,300}?\bfrom\b
+['"`);]\s*\binsert\s+into\b
+['"`);]\s*\bdelete\s+from\b
+['"`);]\s*\bupdate\b[^\n]{1,200}?\bset\b
+['"`);]\s*\bdrop\s+table\b
+['"`);]\s*\balter\s+table\b
 (?<!\w)\binto\s+(outfile|dumpfile)\s+
 (?<!\w)load_file\s*\(
 (?<!\w)from\W+information_schema\W
@@ -16,7 +20,8 @@
 (?<!\w)pg_sleep\s*\(
 (?<!\w)extractvalue\s*\(
 (?<!\w)updatexml\s*\(
-;\s*(drop|delete|insert|update|create|alter)\s+
+# 堆叠查询（限定 SQL 对象关键字，避免自然语言分号误伤）
+;\s*(?:drop\s+table|delete\s+from|insert\s+into|update\s+[^\s]+\s+set|create\s+table|alter\s+table)
 
 # ========== NoSQL 注入 ==========
 "\$(?:ne|gt|gte|lt|lte|nin|in|exists|or|and|expr|regex|where|geoNear|mapReduce)"
@@ -41,14 +46,16 @@ php://input
 \$_(?:GET|POST|REQUEST|COOKIE|FILES|SERVER)\[[^\]]+\]\s*\)\s*;
 
 # ========== SSRF / 伪协议 ==========
-(?<!\w)(?:file|gopher|dict|ldap|ftp|phar|glob|zlib|tftp|imap|smtp|pop3):/+[^\n]+
+# 危险伪协议（移除 ftp://：正常内容中常见，且 SSRF 利用价值远低于 gopher/file）
+(?<!\w)(?:file|gopher|dict|ldap|phar|glob|zlib|tftp|imap|smtp|pop3):/+[^\n]+
 (?:^|://)(?:169\.254\.169\.254|metadata\.google\.internal|metadata\.tencentyun\.com|100\.100\.100\.200|metadata\.aliyun\.com|instance-data)(?:[:/]|$)
 (?:^|://)(?:127\.0\.0\.1|0\.0\.0\.0|10\.\d{1,3}\.\d{1,3}\.\d{1,3}|172\.(1[6-9]|2\d|3[01])\.\d{1,3}\.\d{1,3}|192\.168\.\d{1,3}\.\d{1,3})(?:[:/]|$)
 \.(?:burpcollaborator\.net|interact\.sh|dnslog\.cn|ceye\.io|xip\.io|nip\.io|oastify\.com|requestbin\.com|xss\.ht|canarytokens\.com)
 
 # ========== XSS ==========
 <\s*(?:script|iframe|object|embed|base|form)\b
-(?:^|[^a-z0-9])(on\w+)\s*=
+# 事件处理器（= 前不允许空格，避免 "one = ..." 类自然语言误伤）
+(?:^|[^a-z0-9])on\w+=
 <\s*(?:svg|math)\s+on\w+
 <\s*iframe\s+[^>]*srcdoc
 (?:^|[^a-z0-9])data:text/html[^;]*;base64,
@@ -102,8 +109,10 @@ __import__\s*\(\s*['"]os['"]\s*\)
 \bexec\s*\(\s*compile\s*\(
 
 # .NET / ASP.NET
-__VIEWSTATE
-__EVENTVALIDATION
+# __VIEWSTATE / __EVENTVALIDATION 为 ASP.NET WebForms 正常字段名，拦截会导致 WebForms 请求失败，已注释
+# （ViewState 反序列化特征已由上方 rO0ABX / AAEAAAD 序列化魔术头覆盖）
+# __VIEWSTATE
+# __EVENTVALIDATION
 \.asax$
 \.cshtml$
 \.vbhtml$
@@ -112,7 +121,7 @@ __EVENTVALIDATION
 <%.*%>
 \berb:\s*
 \bparams\[:\w+\]\s*=>
-authenticity_token
+# authenticity_token 为 Rails/Django 等框架正常 CSRF 参数，拦截会导致所有表单提交失败，已移除（与 args 一致）
 
 # Go
 template\.Execute
@@ -120,15 +129,17 @@ html/template
 
 # Cloud Native
  eyJhbGciOiJSUzI1NiIsImtpZCI6
-"accountId"\s*:\s*"\d{12}"
-"instance-id"\s*:
+# 云元数据响应特征在请求体中多为云平台控制台等正常业务 JSON，已注释
+# "accountId"\s*:\s*"\d{12}"
+# "instance-id"\s*:
 
 # Database / Middleware
-\b(?:FLUSHALL|FLUSHDB|CONFIG|SAVE|SHUTDOWN|DEBUG|KEYS)\s+
+# Redis 危险命令（要求换行/引号上下文，避免 "save your"、"debug mode"、"keys and" 等自然语言误伤）
+[\n"']\s*(?:FLUSHALL|FLUSHDB|CONFIG|SAVE|SHUTDOWN|DEBUG|KEYS)(?:\s|$)
 LOAD\s+DATA\s+LOCAL\s+INFILE
 COPY\s+\w+\s+(?:TO|FROM)\s+PROGRAM
 \.runCommand\s*\(\s*\{\s*"?(?:hostInfo|listDatabases|getCmdLineOpts|shutdownServer)
-accessKey=\w+
+# accessKey=\w+ 会误伤阿里云/AWS 等正常 API 的 accessKey 参数，已移除（与 args 一致）
 nacos\.core\.auth\.plugin\.nas\.
 
 # ========== React Server Components / Next.js Server Actions 攻击 ==========
@@ -148,7 +159,8 @@ vm#runIn(?:This|New)Context
 "code"\s*:\s*["'](?:__import__|os\.system|subprocess\.|eval\s*\(|exec\s*\(|compile\s*\()
 
 # CVE-2026-21858: n8n Form/Webhook JSON 伪造文件路径
-"filepath"\s*:\s*"/(?:etc|proc|home|root|var|usr|opt|tmp)/
+# 仅保留高敏感系统目录，避免误伤 /tmp、/var 等正常文件管理/上传业务
+"filepath"\s*:\s*"/(?:etc|proc|sys|root|home)/
 
 # CVE-2025-71333 / CVE-2025-71334: Flowise chatId/chatflowId 路径穿越
 chat(?:flow)?Id["']?\s*:\s*["'][^"']*(?:\.\.|%2e%2e|%252e)
