@@ -7,7 +7,17 @@
 
 # Spring Boot Actuator 敏感端点（不含 health，避免 K8s 探针失效）
 # 覆盖 CVE-2026-22731/22733/40976 涉及的 Actuator 认证绕过场景：限制暴露敏感端点可降低利用面
-^/actuator/(env|beans|heapdump|threaddump|mappings|configprops|loggers|conditions|caches|scheduledtasks|info|auditevents|httptrace|sbom|integrationgraph)$
+# (?:^|/) 段边界锚定：同时覆盖子路径/上下文根部署（如 /myapp/actuator/env）
+(?:^|/)actuator/(env|beans|heapdump|threaddump|mappings|configprops|loggers|conditions|caches|scheduledtasks|info|auditevents|httptrace|sbom|integrationgraph)$
+
+# Actuator 根路径 / 端点索引（泄露全部可用端点清单；不影响 /actuator/health 探针）
+# 配合 init.lua normalize_uri 规范化，;.js / %3b / 双重编码 / 尾斜杠等变体均被归一后命中
+(?:^|/)actuator/?$
+(?:^|/)_actuator/?$
+
+# Actuator 路径参数混淆（/actuator;.js、/actuator;jsessionid=x，Tomcat 剥离 ; 后路由到 actuator）
+(?:^|/)actuator;
+(?:^|/)_actuator;
 
 # Swagger / OpenAPI 文档接口（信息泄露）
 ^/.*swagger\.json(?:[/?#]|$)
@@ -131,7 +141,7 @@
 ^/(?:pillar|salt/pillar|playbooks/vars|ansible/vars)/secrets\.(?:sls|ya?ml)(?:[/?#]|$)
 
 # Spring Boot Actuator / 管理后台变体
-^/_actuator/(?:env|beans|heapdump|threaddump|mappings|configprops|loggers|conditions|caches|scheduledtasks|info|auditevents|httptrace|sbom|integrationgraph)(?:[/?#]|$)
+(?:^|/)_actuator/(?:env|beans|heapdump|threaddump|mappings|configprops|loggers|conditions|caches|scheduledtasks|info|auditevents|httptrace|sbom|integrationgraph)(?:[/?#]|$)
 ^/manage/configprops(?:[/?#]|$)
 ^/admin/heapdump(?:[/?#]|$)
 
@@ -167,11 +177,11 @@
 /autodiscover/autodiscover\.json
 
 # Spring Cloud Gateway
-^/actuator/gateway/routes$
-^/actuator/gateway/refresh$
+(?:^|/)actuator/gateway/routes$
+(?:^|/)actuator/gateway/refresh$
 ^/api/v1/gateway/routes$
 # Spring Cloud Gateway Code Injection (CVE-2022-22947)
-^/actuator/gateway/routes/.+$
+(?:^|/)actuator/gateway/routes/.+$
 
 # Spring Data REST SpEL RCE (CVE-2017-8046)
 # ^/users/\d+$ 为通用 REST 路由（GET /users/123），误伤高，已移至 [aggressive]
@@ -179,7 +189,7 @@
 # Spring Cloud Function SpEL RCE (CVE-2022-22963)
 ^/functionRouter$
 # Spring Boot Actuator jolokia / logfile / env / shutdown 等高敏感端点
-^/actuator/(jolokia|logfile|trace|dump|shutdown|restart|sessions|flyway|liquibase)$
+(?:^|/)actuator/(jolokia|logfile|trace|dump|shutdown|restart|sessions|flyway|liquibase)$
 # Spring Boot whitelabel error page not a CVE but info leak
 # ^/error$ 与业务错误页路由冲突，已移至 [aggressive]
 
@@ -710,7 +720,10 @@ bash\.exe
 # 高误伤规则，按需开启
 
 # 所有 Actuator（含 health，K8s 探针会失效）
-^/actuator(?:/.*)?$
+(?:^|/)actuator(?:/.*)?$
+
+# URL 路径含 ; 参数（Tomcat 路径参数/jsessionid 混淆的通用拦截；使用 URL 会话跟踪的旧站点勿开启）
+^/[^?]*;
 
 # 极度宽泛的 debug 匹配
 ^/.*debug.*/.*$

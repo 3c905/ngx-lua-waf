@@ -68,12 +68,13 @@
 ## 3. `dangerous` — 危险路径 / 文件 / 端点
 
 > **检测位置**：URI 路径，命中表示请求了敏感资源或已知漏洞入口。  
-> **防护目标**：直接屏蔽不应暴露在互联网上的管理后台、调试端点、敏感文件和已知 CVE 利用路径。文件内按 `# [core]` 和 `# [aggressive]` 分组。
+> **防护目标**：直接屏蔽不应暴露在互联网上的管理后台、调试端点、敏感文件和已知 CVE 利用路径。文件内按 `# [core]` 和 `# [aggressive]` 分组。  
+> **路径混淆归一化**：匹配前先按原始 `request_uri` 匹配，未命中再对 `init.lua` 的 `normalize_uri` 归一化结果匹配（多重 URL 解码、剥离 `;` 路径参数、反斜杠转正、合并连续斜杠、解析 `.`/`..` 点段、去末尾斜杠/点/空格、去控制字符），覆盖 `;.js`、`%3b`、`..;/`、`//`、`/./`、尾斜杠等混淆变体，只新增命中、不影响既有命中。
 
 | 分类编号 | 规则类别 | 说明 | 典型风险 | 示例规则 |
 |---------|---------|------|---------|---------|
 | D1 | 隐藏文件 / 目录 | 根路径下以 `.` 开头的资源 | 暴露 `.env`、`.git`、`.htaccess` 等 | `^/\..*$` |
-| D2 | Spring Boot Actuator | 敏感端点（env/heapdump/mappings 等） | 泄露环境变量、配置、甚至完整堆内存 | `^/actuator/(env\|beans\|heapdump\|...)$` |
+| D2 | Spring Boot Actuator | 敏感端点（env/heapdump/mappings 等）、根路径端点索引、`;` 路径参数混淆变体；规则用 `(?:^|/)` 段边界锚定，兼容子路径/上下文根部署（如 `/myapp/actuator/env`） | 泄露环境变量、配置、甚至完整堆内存 | `(?:^|/)actuator/(env\|beans\|heapdump\|...)$`、`(?:^|/)actuator/?$`、`(?:^|/)actuator;` |
 | D3 | Swagger / OpenAPI | API 文档接口暴露 | 攻击者通过文档快速发现可利用接口 | `swagger\.json`、`^/swagger-ui(/.*)?$`、`^/v[23]/api-docs` |
 | D4 | phpinfo / 状态页 | 服务器信息与调试页 | 泄露 PHP 版本、模块、路径、环境变量 | `^/phpinfo\.php$`、`^/nginx_status$` |
 | D5 | 调试工具 / 性能分析 | pprof、debugbar、profiler | 泄露内存、CPU、源码、SQL 等信息 | `^/debug/pprof(/.*)?$`、`^/_debugbar(/.*)?$` |

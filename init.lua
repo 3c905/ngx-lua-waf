@@ -373,14 +373,91 @@ function args()
 end
 
 -- ============================================================
+-- URI 规范化（防御路径混淆绕过）
+-- 后端容器/框架在路由前会做规范化，WAF 若只匹配原始 request_uri，
+-- 攻击者可利用"WAF 看到的"与"后端路由的"路径差异绕过。覆盖变体：
+--   1. Tomcat/Spring 路径参数：/actuator;.js、/actuator;jsessionid=x、/actuator;/env
+--   2. URL 编码/双重编码：/actuator%3b.js、/actuator%253b.js、/%61ctuator/env、/actuator%2fenv
+--   3. 反斜杠分隔符：/actuator\env（IIS/部分 Java 容器视同 /）
+--   4. 连续斜杠：//actuator//env
+--   5. 点段：/actuator/./env、/x/../actuator/env、/x/..;/actuator/env（Shiro 经典绕过）
+--   6. 末尾斜杠：/actuator/env/（Spring 等框架容忍尾斜杠）
+--   7. NUL/控制字符：/actuator%00/env
+--   8. 尾部点/空格：/shell.php.、/config.json%20（Windows/IIS 会剥离后照常解析）
+-- 匹配顺序为先原始 URI、后规范化 URI，只新增命中、不丢失已有命中。
+-- ============================================================
+local function normalize_uri(uri)
+    if not uri then return uri end
+    local path = uri
+    -- 去掉查询串（路径混淆只作用于 path 部分）
+    local qm = string.find(path, "?", 1, true)
+    if qm then
+        path = string.sub(path, 1, qm - 1)
+    end
+    -- 多重解码（URL 编码/双重编码、\xNN、\uNNNN、HTML 实体）
+    path = utils.decode_chain(path, 3)
+    -- 去除 NUL 及控制字符
+    path = string.gsub(path, "[%z\1-\31\127]", "")
+    -- 反斜杠统一为正斜杠
+    path = string.gsub(path, "\\", "/")
+    -- 剥离路径参数（; 到下一个 / 为止，Tomcat 路由时同样剥离）
+    path = string.gsub(path, ";[^/]*", "")
+    -- 合并连续斜杠（保留绝对 URI 的 scheme:// 前缀）
+    local scheme, rest = string.match(path, "^(%a+://)(.*)$")
+    if scheme then
+        path = scheme .. string.gsub(rest, "/+", "/")
+    else
+        path = string.gsub(path, "/+", "/")
+    end
+    -- 解析单点段 /./
+    local prev
+    repeat
+        prev = path
+        path = string.gsub(path, "/%./", "/")
+        path = string.gsub(path, "/%.$", "/")
+    until path == prev
+    -- 解析双点段 /../（覆盖 ..;/ 变体：剥离 ; 后即为 /../）
+    repeat
+        prev = path
+        path = string.gsub(path, "/[^/]+/%.%./", "/", 1)
+        path = string.gsub(path, "/[^/]+/%.%.$", "/", 1)
+    until path == prev
+    -- 根部残留的越界 .. 直接丢弃（与容器行为一致：按根目录处理）
+    path = string.gsub(path, "^/%.%./", "/")
+    path = string.gsub(path, "^/%.%.$", "/")
+    -- 去掉末尾斜杠（/actuator/env/ 与 /actuator/env 同路由）
+    path = string.gsub(path, "/+$", "")
+    -- 去掉末尾的点/空格（Windows/IIS 解析文件名时会剥离，/shell.php. 等同 /shell.php）
+    path = string.gsub(path, "[ %.]+$", "")
+    if path == "" then
+        path = "/"
+    end
+    return path
+end
+
+-- 每请求只规范化一次，url()/dangerous() 共用，缓存于 ngx.ctx
+local function get_normalized_uri()
+    local ctx = ngx.ctx
+    if ctx.waf_norm_uri == nil then
+        ctx.waf_norm_uri = normalize_uri(ngx.var.request_uri)
+    end
+    return ctx.waf_norm_uri
+end
+
+-- ============================================================
 -- URL 黑名单
 -- ============================================================
 
 function url()
     if UrlDeny then
+        local raw_uri = ngx.var.request_uri
+        local norm_uri = get_normalized_uri()
         for _, rule in pairs(urlrules or {}) do
             if rule ~= "" then
-                local m = cache.match_cached(ngx.var.request_uri, rule, "isj")
+                local m = cache.match_cached(raw_uri, rule, "isj")
+                if not m and norm_uri ~= raw_uri then
+                    m = cache.match_cached(norm_uri, rule, "isj")
+                end
                 if m then
                     log('GET', ngx.var.request_uri, "-", "[URL][403] hit=[" .. string.sub(m[0] or "-", 1, 200) .. "] rule=" .. rule)
                     if should_block("URLAction") then
@@ -566,13 +643,18 @@ end
 function dangerous()
     if BlockDangerousCheck then
         if dgrules ~= nil then
+            local raw_uri = ngx.var.request_uri
+            local norm_uri = get_normalized_uri()
             for _, item in pairs(dgrules) do
                 local rule = item.rule
                 local tag = item.tag
                 if not BlockAggressiveCheck and tag == "aggressive" then
                     -- 激进规则已关闭，跳过
                 elseif rule ~= "" then
-                    local m = cache.match_cached(ngx.var.request_uri, rule, "isj")
+                    local m = cache.match_cached(raw_uri, rule, "isj")
+                    if not m and norm_uri ~= raw_uri then
+                        m = cache.match_cached(norm_uri, rule, "isj")
+                    end
                     if m then
                         local hit = string.sub(m[0] or "-", 1, 200)
                         log('GET', ngx.var.request_uri, "-", "[DANGEROUS][" .. tag .. "][404] hit=[" .. hit .. "] rule=" .. rule)
@@ -648,7 +730,8 @@ end
 function traversal()
     local request_uri = ngx.var.request_uri
     if request_uri ~= nil then
-        local m = cache.match_cached(request_uri, [[(\.\./|\.(%2e)|(%2e)\.|%2e%2e|%252e|%%32%65|\%00)]], "isj")
+        -- 末尾两组覆盖 ..;/ 混淆（Shiro/Tomcat 经典绕过）：..;、..%3b、%2e%2e;、%2e%2e%3b
+        local m = cache.match_cached(request_uri, [[(\.\./|\.(%2e)|(%2e)\.|%2e%2e|%252e|%%32%65|\%00|(\.\.|%2e%2e|%2e\.|\.%2e)(;|%3b))]], "isj")
         if m then
             local hit = string.sub(m[0] or "-", 1, 200)
             log('GET', request_uri, "-", "[TRAVERSAL][400] hit=[" .. hit .. "] path_traversal")
