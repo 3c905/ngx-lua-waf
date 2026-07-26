@@ -794,7 +794,7 @@ function traversal()
             -- 注意只解码不解析点段（normalize_uri 会把 ../ 消解掉，反而丢失证据）
             local decoded = utils.decode_chain(request_uri, 3)
             decoded = string.gsub(decoded, "\\", "/")
-            m = cache.match_cached(decoded, [[\.\./|[%z]]], "isj")
+            m = cache.match_cached(decoded, [==[\.\./|[%z]]==], "isj")
         end
         if m then
             local hit = string.sub(m[0] or "-", 1, 200)
