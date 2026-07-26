@@ -51,10 +51,15 @@
 (?:=|\s|,|\()0x[0-9a-fA-F]{16,}(?=\s*[,)])
 # MySQL 版本注释
 /\*!\d{5}
+# 经典布尔注入（' or 1=1-- / ' or 'a'='a），限定引号/等值上下文避免自然语言误伤
+'\s*(?:or|and)\s+\S{1,30}\s*=\s*\S{1,30}
+(?<![\w'"])(?:or|and)\s+\d+\s*=\s*\d+
 
 # ========== NoSQL 注入 ==========
 "\$(?:ne|gt|gte|lt|lte|nin|in|exists|or|and|expr|regex|where|geoNear|mapReduce)"
 \[\$where\]
+# PHP 数组式参数注入（?user[$ne]=x 绕过认证）
+\[\$(?:ne|gt|gte|lt|lte|nin|in|exists|or|and|expr|regex|where)\]
 
 # ========== 命令注入 ==========
 # 下载管道执行
@@ -67,6 +72,10 @@
 # 反引号与 $()（限定命令上下文）
 (?:^|[;|&\n])\s*`[^`]*`
 (?:^|[;|&\n])\s*\$\([^)]+\)
+# 分号/& 拼接信息收集命令（;whoami、&hostname 等；不含 | 避免误杀 Markdown 表格）
+[;&]\s*(?:whoami|uname|hostname|ifconfig|ipconfig|netstat|tasklist)(?:\s|$)
+# 直接读取敏感文件（cat /etc/passwd、type /boot.ini 等）
+(?:^|[\s;|&])(?:cat|type|less|more|head|tail)\s+/(?:etc|proc|sys|root|home|boot)/
 
 # ========== PHP 代码执行 / LFI ==========
 (?<!\w)(?:include|require|require_once|include_once)\s*\(
@@ -74,6 +83,8 @@
 (?<!\w)phpinfo\s*\(
 php://filter
 php://input
+# Windows LFI 目标
+(?:^|[\s/\\])(?:boot\.ini|win\.ini)(?:[/?#.]|$)
 # PHP 危险函数（带上下文）
 (?<!\w)(?:assert|create_function|preg_replace)\s*\(
 \$_(?:GET|POST|REQUEST|COOKIE|FILES|SERVER)\[[^\]]+\]\s*\)\s*;
@@ -99,9 +110,15 @@ php://input
 <\s*iframe\s+[^>]*srcdoc
 # data URI
 (?:^|[^a-z0-9])data:text/html[^;]*;base64,
+# javascript: 伪协议（重定向/链接型 XSS，如 ?url=javascript:alert(1)）
+(?:^|[^a-z0-9])javascript\s*:
 
 # ========== JNDI / Log4Shell (CVE-2021-44228) ==========
 \$\{jndi:(?:ldap[s]?|dns|rmi|iiop|http|https|nis|corba|nds):[^}]*\}
+# Log4Shell 混淆绕过：${${lower:j}ndi:...} / ${${env:BAR:-j}ndi:...} 等嵌套占位符
+\$\{[^}\n]{0,120}\$\{
+# 混淆辅助 lookup（lower/upper/base64 等，正常业务中极罕见）
+\$\{(?:lower|upper|base64|main|bundle|log4j):
 
 # ========== Spring4Shell (CVE-2022-22965) ==========
 class\.module\.classLoader
@@ -118,7 +135,7 @@ spring\.cloud\.function\.definition
 "alg"\s*:\s*"none"
 "jwk"\s*:
 "x5c"\s*:
-"kid"\s*:\s*["']
+# "kid" 字段为正常 JWK/OIDC 交互常见字段（kid 注入由 SQL 注入规则覆盖），已移除
 
 # ========== 反序列化 ==========
 # Fastjson/Jackson 危险类
@@ -133,6 +150,12 @@ AAEAAAD
 # ========== 模板注入 SSTI ==========
 # 限定危险关键字，减少误伤前端占位符
 (?:\$\{|#\{)[^}]*(?:class|runtime|process|T\s*\(|invoke|exec|getRuntime)[^}]*\}
+# Jinja2/Twig 等 {{ }} 探测（dunder/constructor 访问，正常占位符不含这些）
+\{\{[^}]{0,200}(?:__class__|__mro__|__subclasses__|__globals__|__builtins__|constructor|__proto__)[^}]{0,200}\}\}
+
+# ========== 原型污染 ==========
+# JS 原型链污染（?__proto__[isAdmin]=1、{"__proto__":{...}}）
+__proto__\s*[\[":=]
 
 # ========== Java RMI / JMX ==========
 java\.rmi
@@ -183,11 +206,11 @@ xwork\.MethodAccessor
 # ========== Go ==========
 # Go 模板注入
 template\.Execute
-html/template
+# html/template 会误杀 /docs/html/template 类文档/博客 URL，已移除
 
 # ========== Cloud Native ==========
-# Kubernetes API Token / ServiceAccount
- eyJhbGciOiJSUzI1NiIsImtpZCI6
+# 原 Kubernetes ServiceAccount Token 特征 " eyJhbGciOiJSUzI1NiIsImtpZCI6" 会命中
+# 所有带 kid 的 RS256 JWT（Auth0/Azure AD/AWS Cognito 等均是），误杀正常认证流，已移除。
 # 云元数据 API 响应特征（响应侧特征，出现在请求参数中多为云平台控制台等正常业务 JSON，已注释）
 # "accountId"\s*:\s*"\d{12}"
 # "instance-id"\s*:
@@ -205,7 +228,8 @@ COPY\s+\w+\s+(?:TO|FROM)\s+PROGRAM
 # accessKey=\w+ 会误伤阿里云/AWS 等正常 API 的 accessKey 参数，已移除；保留 Nacos 专属特征
 nacos\.core\.auth\.plugin\.nas\.
 # ZooKeeper 四字命令
-^/(?:envi|ruok|stat|mntr|conf|dump|wchs|wchc|srst|crst|cons|kill)$
+# 已移除：^/(?:envi|ruok|stat|...)$ 会误杀 ?type=stat 等正常参数值，
+# 且 ZooKeeper 四字命令走 TCP 2181 端口，不经过 HTTP WAF
 
 # ========== 2026 CVE 漏洞参数特征 ==========
 

@@ -206,8 +206,8 @@ local function apply_progressive_penalty(ip, uri, req_type)
         return cc_block_or_exit(503)
         
     elseif history == 2 and _M.config.challenge_enabled then
-        -- 第2次：尝试 Cookie 挑战
-        local challenge_passed = ngx.var.cookie__waf_cc
+        -- 第2次：尝试 Cookie 挑战（cookie 名与 config.lua 的 CCChallengeCookie 联动）
+        local challenge_passed = ngx.var["cookie_" .. (_M.config.challenge_cookie or "_waf_cc")]
         if challenge_passed and challenge_passed == "1" then
             -- 已通过挑战，但频率仍过高，封禁短时间
             _M.ban_ip(ip, 2, _M.config.ban_duration_1)

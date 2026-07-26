@@ -26,6 +26,9 @@
 javascript:
 # JNDI / Log4Shell
 \$\{jndi:
+# Log4Shell 混淆绕过：${${lower:j}ndi:...} 等嵌套占位符
+\$\{[^}\n]{0,120}\$\{
+\$\{(?:lower|upper|base64|main|bundle|log4j):
 
 # DoS / 超大请求：Content-Length > 10MB
 ^Content-Length:\s*(?:[1-9]\d{7,}|\d{10,})

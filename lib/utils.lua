@@ -7,47 +7,47 @@ local _M = {}
 -- 配置：信任的前置代理 IP 段（CIDR 格式）
 local trusted_proxies = _M.trusted_proxies or {}
 
--- 解析 X-Forwarded-For，返回最左侧非信任代理的真实 IP
+-- 解析 X-Forwarded-For，返回最左（或最右）侧非信任代理的真实 IP
+-- 安全要点：只有当直接对端（remote_addr）本身是可信代理时才采纳 XFF，
+-- 否则攻击者直连时伪造 XFF 即可绕过 IP 黑/白名单与 CC 计数。
 function _M.get_real_ip()
     local remote_addr = ngx.var.remote_addr or "unknown"
-    
+
     -- 无 XFF 头，直接返回 remote_addr
     local xff = ngx.var.http_x_forwarded_for
     if not xff or xff == "" then
         return remote_addr
     end
-    
-    -- 按逗号分割，取最左侧（客户端真实 IP 应在最左）
-    -- 注意：某些配置下真实 IP 在最右，可通过配置调整
+
+    -- 对端不是可信代理：忽略 XFF（防伪造），返回 remote_addr
+    if not _M.ip_in_list(remote_addr, trusted_proxies) then
+        return remote_addr
+    end
+
+    -- 按逗号分割
     local ip_chain = {}
     for ip in string.gmatch(xff, "[^,%s]+") do
         table.insert(ip_chain, ip)
     end
-    
-    -- 默认策略：从最左开始，第一个非内网/非信任代理的 IP
-    for _, ip in ipairs(ip_chain) do
-        -- 基础格式校验
-        if not string.match(ip, "^%d+%.%d+%.%d+%.%d+$") and 
-           not string.match(ip, "^[%x:]+") then
-            goto continue
-        end
-        
-        -- 跳过信任代理
-        local is_trusted = false
-        for _, cidr in ipairs(trusted_proxies) do
-            if _M.ip_in_cidr(ip, cidr) then
-                is_trusted = true
-                break
+
+    -- 策略：left 取最左（标准代理链），right 取最右（部分 CDN 配置）
+    local first, last, step = 1, #ip_chain, 1
+    if _G.RealIPStrategy == "right" then
+        first, last, step = #ip_chain, 1, -1
+    end
+
+    for i = first, last, step do
+        local ip = ip_chain[i]
+        -- 基础格式校验（IPv4 / IPv6）
+        if string.match(ip, "^%d+%.%d+%.%d+%.%d+$") or
+           string.match(ip, "^[%x:]+$") then
+            -- 跳过信任代理，返回第一个非信任 IP
+            if not _M.ip_in_list(ip, trusted_proxies) then
+                return ip
             end
         end
-        
-        if not is_trusted then
-            return ip
-        end
-        
-        ::continue::
     end
-    
+
     -- 全是信任代理，返回 remote_addr
     return remote_addr
 end
@@ -66,8 +66,10 @@ local bit = require "bit"
 local function ip_to_number(ip)
     local o1, o2, o3, o4 = string.match(ip, "^(%d+)%.(%d+)%.(%d+)%.(%d+)$")
     if not o1 then return nil end
-    return (tonumber(o1) * 16777216) + (tonumber(o2) * 65536) + 
-           (tonumber(o3) * 256) + tonumber(o4)
+    o1, o2, o3, o4 = tonumber(o1), tonumber(o2), tonumber(o3), tonumber(o4)
+    -- 八位组必须在 0-255，防止 "999.1.1.1" 类非法值参与 CIDR 计算
+    if o1 > 255 or o2 > 255 or o3 > 255 or o4 > 255 then return nil end
+    return (o1 * 16777216) + (o2 * 65536) + (o3 * 256) + o4
 end
 
 function _M.ip_in_cidr(ip, cidr)

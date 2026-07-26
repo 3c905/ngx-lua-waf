@@ -268,15 +268,53 @@ elseif check("cookie", cookie()) then
     return
 elseif PostCheck then
     if method == "POST" or method == "PUT" or method == "PATCH" then
-        -- 辅助：从已读 body 中扫描文件扩展名
+        -- 辅助：从已读 body 中扫描文件扩展名 + 文件内容（图片马/脚本马）
+        -- 内容特征均为 >=5 字节，避免命中图片二进制中的随机字节序列
+        local upload_image_ext = {
+            jpg = true, jpeg = true, png = true, gif = true, bmp = true,
+            webp = true, ico = true, svg = true,
+        }
+        local upload_content_sigs = {
+            "<?php", "<script", "<jsp:", "<%@page", "<%eval", "<%exec", "#!/bin/",
+        }
         local function scan_multipart_body(body)
             if not body or body == "" then return false end
-            for fname in string.gmatch(body, 'filename="([^"]+)"') do
+            local pos = 1
+            while true do
+                local s, e, fname = string.find(body, 'filename="([^"]+)"', pos)
+                if not s then break end
                 local ext = string.match(fname, "%.([a-zA-Z0-9]+)$")
-                if ext and fileExtCheck(ext) then
-                    waf_debug("WAF_POST_FILEEXT_BLOCK: ip=", client_ip, " uri=", request_uri, " file=", fname)
-                    return true
+                if ext then
+                    local lext = string.lower(ext)
+                    -- 1. 扩展名黑名单
+                    if fileExtCheck(lext) then
+                        waf_debug("WAF_POST_FILEEXT_BLOCK: ip=", client_ip, " uri=", request_uri, " file=", fname)
+                        return true
+                    end
+                    -- 2. 图片类扩展名：嗅探 part 内容前 64KB 是否夹带脚本
+                    if upload_image_ext[lext] then
+                        local hs, he = string.find(body, "\r\n\r\n", e, true)
+                        if hs then
+                            local bs = string.find(body, "\r\n--", he + 1, true)
+                            local cend = bs and (bs - 1) or (he + 65536)
+                            local content = string.sub(body, he + 1, math.min(cend, he + 65536))
+                            if content and content ~= "" then
+                                local lowered = string.lower(content)
+                                for _, sig in ipairs(upload_content_sigs) do
+                                    if string.find(lowered, sig, 1, true) then
+                                        log('POST', ngx.var.request_uri, "-", "[UPLOAD-CONTENT][403] hit=[" .. sig .. "] file=" .. fname)
+                                        waf_debug("WAF_POST_CONTENT_BLOCK: ip=", client_ip, " uri=", request_uri, " file=", fname, " sig=", sig)
+                                        if should_block("FileExtAction") then
+                                            return say_html()
+                                        end
+                                        return true
+                                    end
+                                end
+                            end
+                        end
+                    end
                 end
+                pos = e + 1
             end
             return false
         end
@@ -389,11 +427,22 @@ elseif PostCheck then
             -- 非 multipart：安全地使用 read_body
             -- ============================================================
             ngx.req.read_body()
-            local args = ngx.req.get_post_args()
+            -- 参数个数上限：超出即视为异常（防止 padding 绕过和解析型 DoS）
+            local MAX_POST_ARGS = 1024
+            local args = ngx.req.get_post_args(MAX_POST_ARGS + 1)
 
             -- 通用 POST 参数扫描
             if args then
+                local arg_count = 0
                 for key, val in pairs(args) do
+                    arg_count = arg_count + 1
+                    if arg_count > MAX_POST_ARGS then
+                        log('POST', ngx.var.request_uri, "-", "[POST][400] hit=[too many args] count>" .. MAX_POST_ARGS)
+                        if should_block("PostAction") then
+                            return ngx.exit(400)
+                        end
+                        return
+                    end
                     local data
                     if type(val) == 'table' then
                         local t = {}
@@ -409,20 +458,23 @@ elseif PostCheck then
                     else
                         data = val
                     end
-                    if data and data ~= "" and type(data) ~= "boolean" then
-                        local decoded = utils.decode_chain(unescape(data), 3)
-                        for _, rule in pairs(postrules or {}) do
-                            if rule ~= "" then
-                                local m = cache.match_cached(decoded, rule, "isj")
-                                if not m then
-                                    m = cache.match_cached(unescape(data), rule, "isj")
-                                end
-                                if m then
-                                    log('POST', ngx.var.request_uri, "-", "[POST][403] hit=[" .. string.sub(m[0] or "-", 1, 200) .. "] rule=" .. rule)
-                                    if should_block("PostAction") then
-                                        return say_html()
+                    -- 先扫参数值，再扫参数名（防御 user[$ne]=x 类 NoSQL 数组参数注入）
+                    for _, target in ipairs({data, key}) do
+                        if target and target ~= "" and type(target) ~= "boolean" then
+                            local decoded = utils.decode_chain(unescape(target), 3)
+                            for _, rule in pairs(postrules or {}) do
+                                if rule ~= "" then
+                                    local m = cache.match_cached(decoded, rule, "isj")
+                                    if not m then
+                                        m = cache.match_cached(unescape(target), rule, "isj")
                                     end
-                                    return
+                                    if m then
+                                        log('POST', ngx.var.request_uri, "-", "[POST][403] hit=[" .. string.sub(m[0] or "-", 1, 200) .. "] rule=" .. rule)
+                                        if should_block("PostAction") then
+                                            return say_html()
+                                        end
+                                        return
+                                    end
                                 end
                             end
                         end
@@ -436,12 +488,18 @@ elseif PostCheck then
                 content_type_header = content_type_header[1]
             end
             local ct = content_type_header or ""
-            if string.find(ct, "application/json", 1, true) then
+            -- 同时覆盖 application/hal+json、application/vnd.api+json 等 +json 类型
+            if string.find(ct, "application/json", 1, true) or string.find(ct, "+json", 1, true) then
                 local raw_body = ngx.req.get_body_data()
                 if raw_body and raw_body ~= "" then
+                    -- 多重解码，覆盖 \u0027 等 Unicode/双重编码绕过
+                    local decoded_body = utils.decode_chain(raw_body, 3)
                     for _, rule in pairs(postrules or {}) do
                         if rule ~= "" then
-                            local m = cache.match_cached(raw_body, rule, "isj")
+                            local m = cache.match_cached(decoded_body, rule, "isj")
+                            if not m then
+                                m = cache.match_cached(raw_body, rule, "isj")
+                            end
                             if m then
                                 log('POST', ngx.var.request_uri, "-", "[POST][403] hit=[" .. string.sub(m[0] or "-", 1, 200) .. "] rule=" .. rule)
                                 if should_block("PostAction") then

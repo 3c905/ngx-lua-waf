@@ -39,7 +39,8 @@
 
 # [U3/U4] CMS / 后台 / 脚本探测路径（日志中新发现）
 ^/xxxss(?:[/?#]|$)
-^/assets/js/fast\.js(?:[/?#]|$)
+# ^/assets/js/fast\.js 与 ^/util/aes\.js 已移除：fast.js/aes.js 是真实常见的
+# 前端 JS 文件名（aes.js 为常见加密库），通用规则中拦截会误杀正常站点资源
 ^/index\.php/store/passport/login(?:[/?#]|$)
 ^/admin-api/system/auth/get-permission-info(?:[/?#]|$)
 ^/api\.php\?s=
@@ -58,7 +59,6 @@
 
 # [U8] 日志中新发现的扫描器/webshell 探测路径
 ^/developmentserver/metadatauploader(?:[/?#]|$)
-^/util/aes\.js(?:[/?#]|$)
 ^/api/c5/business/livehouse/index(?:[/?#]|$)
 
 # [U9] URL 路径中 URL 编码的 XSS 探测载荷（如 /path/35%27;%22%20style=...）
