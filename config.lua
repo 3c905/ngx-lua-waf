@@ -85,9 +85,10 @@ TrustedProxies = {
     -- "103.21.244.0/22",
 }
 
--- 获取真实 IP 策略："left" 取 XFF 最左（默认），"right" 取最右
--- 最左适用于标准代理链；最右适用于某些 CDN 配置
-RealIPStrategy = "left"
+-- 真实 IP 解析规则（固定行为，无需配置）：
+-- 仅当 remote_addr 属于上方 TrustedProxies 时才解析 XFF，并从右往左跳过
+-- 信任代理取第一个不可信 IP（与 nginx realip 模块 real_ip_recursive 一致），
+-- 客户端伪造的 XFF 条目不会生效
 
 -- ============================================================
 -- 【新增】增强 CC 防御配置

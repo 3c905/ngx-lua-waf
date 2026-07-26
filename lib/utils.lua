@@ -7,48 +7,41 @@ local _M = {}
 -- 配置：信任的前置代理 IP 段（CIDR 格式）
 local trusted_proxies = _M.trusted_proxies or {}
 
--- 解析 X-Forwarded-For，返回最左侧非信任代理的真实 IP
+-- 解析 X-Forwarded-For，返回真实客户端 IP
+-- 安全模型（与 nginx realip 模块 real_ip_recursive 一致）：
+--   1. 只有当直接对端 remote_addr 属于信任代理时，XFF 才可信；
+--      否则客户端可随意伪造 XFF 绕过 IP 黑/白名单和 CC 按 IP 计数。
+--   2. 可信时从右往左跳过信任代理，第一个不可信 IP 即真实客户端；
+--      更靠左的条目是客户端自己写的，不可信。
 function _M.get_real_ip()
     local remote_addr = ngx.var.remote_addr or "unknown"
-    
+
     -- 无 XFF 头，直接返回 remote_addr
     local xff = ngx.var.http_x_forwarded_for
     if not xff or xff == "" then
         return remote_addr
     end
-    
-    -- 按逗号分割，取最左侧（客户端真实 IP 应在最左）
-    -- 注意：某些配置下真实 IP 在最右，可通过配置调整
+
+    -- 直接对端不是信任代理：XFF 完全不可信，忽略
+    if not _M.ip_in_list(remote_addr, trusted_proxies) then
+        return remote_addr
+    end
+
+    -- 按逗号分割代理链
     local ip_chain = {}
     for ip in string.gmatch(xff, "[^,%s]+") do
         table.insert(ip_chain, ip)
     end
-    
-    -- 默认策略：从最左开始，第一个非内网/非信任代理的 IP
-    for _, ip in ipairs(ip_chain) do
-        -- 基础格式校验
-        if not string.match(ip, "^%d+%.%d+%.%d+%.%d+$") and 
-           not string.match(ip, "^[%x:]+") then
-            goto continue
-        end
-        
-        -- 跳过信任代理
-        local is_trusted = false
-        for _, cidr in ipairs(trusted_proxies) do
-            if _M.ip_in_cidr(ip, cidr) then
-                is_trusted = true
-                break
-            end
-        end
-        
-        if not is_trusted then
+
+    -- 从右往左跳过信任代理，取第一个不可信 IP
+    for i = #ip_chain, 1, -1 do
+        local ip = ip_chain[i]
+        if not _M.ip_in_list(ip, trusted_proxies) then
             return ip
         end
-        
-        ::continue::
     end
-    
-    -- 全是信任代理，返回 remote_addr
+
+    -- 全链都是信任代理，返回 remote_addr
     return remote_addr
 end
 

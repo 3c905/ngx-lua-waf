@@ -339,6 +339,9 @@ function args()
     local args = ngx.req.get_uri_args()
     for _, rule in pairs(argsrules or {}) do
         for key, val in pairs(args) do
+            -- 注意：data 必须在分支外声明，否则 if/else 内的 local 会被丢弃，
+            -- 导致下方匹配逻辑永远拿到 nil（GET 参数检查整体失效）
+            local data
             if type(val) == 'table' then
                 local t = {}
                 for k, v in pairs(val) do
@@ -347,9 +350,9 @@ function args()
                     end
                     table.insert(t, v)
                 end
-                local data = table.concat(t, " ")
+                data = table.concat(t, " ")
             else
-                local data = val
+                data = val
             end
             if data and type(data) ~= "boolean" and rule ~= "" then
                 -- 使用解码链防御编码绕过
