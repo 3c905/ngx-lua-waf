@@ -919,3 +919,16 @@ function _G.waf_reload_rules()
     ngx.log(ngx.NOTICE, "WAF rules reloaded manually")
     return true
 end
+
+-- ============================================================
+-- 防止 worker 中 require 'init' 二次执行本文件
+-- init_by_lua_file 通过 loadfile 执行，不会写入 package.loaded；
+-- worker fork 后 waf.lua/response.lua 的 require 'init' 会在
+-- package.loaded 中找不到 'init' 而再次执行本文件。此时
+-- package.loaded['config'] 已从 master 继承（config 不重跑），
+-- 上方 optionIsOn() 的同名转换（UrlDeny/CCDeny/Redirect/attacklog）
+-- 读到的已是布尔值，optionIsOn(true)==false 会被翻转为关闭，
+-- 导致 URL 黑名单、CC 防御、拦截页、攻击日志被静默禁用。
+-- 注册后 require 'init' 直接命中缓存，不再二次执行。
+-- ============================================================
+package.loaded["init"] = true
