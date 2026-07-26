@@ -81,7 +81,7 @@
 | D6 | AI / Notebook 平台 | Gradio、Streamlit、Jupyter 入口 | 这些平台常缺乏认证，暴露后可执行代码 | `^/(gradio\|streamlit\|jupyter)(/.*)?$`（notebook 为常见业务名词，已归入 aggressive） |
 | D7 | CMS / 框架后台与安装入口 | WordPress、ThinkPHP、通用 admin/install | 弱口令爆破、未授权安装、配置泄露 | `^/wp-(login\|config\|admin)`、`^/thinkphp(/.*)?$` |
 | D8 | 上传目录脚本执行 | 上传目录中执行脚本 | 绕过上传限制后执行 WebShell | `^/(upload\|uploads\|...)/.*\.(php\d*\|jsp\|asp\|...)$` |
-| D9 | 已知高危 CVE / 通用漏洞路径 | PHPUnit RCE、WebLogic、JBoss、Solr、通达、帆软、Ueditor 等 | 一键利用已知漏洞获取权限 | `/vendor/phpunit/.../eval-stdin\.php`、`/_async/AsyncResponseService` |
+| D9 | 已知高危 CVE / 通用漏洞路径 | PHPUnit RCE、WebLogic、JBoss、Solr、通达、帆软、Ueditor、泛微 E-cology（CVE-2026-22679）等 | 一键利用已知漏洞获取权限 | `/vendor/phpunit/.../eval-stdin\.php`、`/_async/AsyncResponseService`、`/papi/esearch/data/devops/dubboApi/debug/method` |
 | D10 | 代理滥用 / SSRF | 请求 URI 为完整 URL | 将服务器作为代理访问内网或外网 | `^https?://` |
 | D11 | 敏感配置文件泄露 | env/ini/yml/properties 等 | 泄露数据库密码、API Key、业务配置 | `\.(env\|ini\|conf\|config\|properties\|yml\|yaml)$` |
 | D12 | 密钥 / 证书文件泄露 | pem/key/p12/jks 等 | 私钥泄露导致 HTTPS 会话可被解密 | `\.(pem\|key\|p12\|pfx\|jks\|keystore\|...)$` |
@@ -117,7 +117,7 @@
 | 分类编号 | 规则类别 | 说明 | 典型攻击场景 | 示例规则 |
 |---------|---------|------|-------------|---------|
 | H1 | 代理伪造 / IP 欺骗 | 伪造 X-Forwarded-*、Client-IP 等绕过 IP 限制 | 攻击者伪造 `X-Forwarded-For: 127.0.0.1` 绕过访问控制 | `^X-Forwarded-Host:`、含内网 IP 的 X-Forwarded-For |
-| H2 | HTTP 请求走私 | 同时出现 Transfer-Encoding 等走私特征 | 前端代理与后端服务器解析不一致，导致请求边界混乱 | `^Transfer-Encoding:` |
+| H2 | HTTP 请求走私 / 方法+头组合攻击 | 同时出现 Transfer-Encoding、重复 Content-Length；PUT + Content-Range（CVE-2025-24813 Tomcat partial PUT RCE） | 前端代理与后端服务器解析不一致导致请求边界混乱；partial PUT 写 session 文件反序列化 | CL+TE 同现、重复 CL、PUT+Content-Range（均为代码层检测） |
 | H3 | Header 注入攻击 | Cookie/User-Agent 等头中植入 SQLi/XSS/JNDI | 把 payload 写入 Header 绕过参数检测 | `sleep\(`、`union\s+select`、`<script`、`\$\{jndi:` |
 | H4 | DoS / 超大请求 | 异常巨大的 Content-Length | 发送超大 Body 耗尽服务端内存/磁盘 | `^Content-Length:\s*(9\d{8}\|\d{10,})` |
 | H5 | CRLF 注入 | 头值中出现换行符 | 注入额外 HTTP 头或分割响应，实施 XSS/缓存投毒 | `\n`、`\r` |
