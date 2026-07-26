@@ -3,6 +3,9 @@
 
 # ========== JNDI / Log4Shell ==========
 \$\{jndi:(?:ldap[s]?|dns|rmi|iiop|http|https|nis|corba|nds):[^}]*\}
+# Log4Shell 混淆绕过：${${lower:j}ndi:...} 等嵌套占位符
+\$\{[^}\n]{0,120}\$\{
+\$\{(?:lower|upper|base64|main|bundle|log4j):
 
 # ========== 反序列化 ==========
 "@type"\s*:\s*"(?:com\.sun|java\.lang\.(?:Runtime|ProcessBuilder)|org\.apache\.(?:commons|ibatis|logging)|org\.springframework|com\.mysql|ch\.qos\.logback)[^"]*"
@@ -14,7 +17,7 @@ AAEAAAD
 "alg"\s*:\s*"none"
 "jwk"\s*:
 "x5c"\s*:
-"kid"\s*:\s*["']
+# "kid" 字段为正常 JWK/OIDC 交互常见字段（kid 注入由 SQL 注入规则覆盖），已移除
 
 # ========== SQL 盲注 ==========
 (?<!\w)sleep\s*\(\s*\d+\s*\)

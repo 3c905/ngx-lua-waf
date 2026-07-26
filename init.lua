@@ -332,44 +332,76 @@ function Set(list)
 end
 
 -- ============================================================
--- GET 参数检查（增强：多重解码）
+-- GET 参数检查（增强：多重解码 + 参数名扫描）
 -- ============================================================
 
+-- 参数个数上限：超出即视为异常（防止 padding 绕过和解析型 DoS）
+local MAX_URI_ARGS = 1024
+
+-- 对单个值/参数名做多重解码并匹配规则；返回首个命中及规则
+local function match_arg_rules(data, rules)
+    if not data or data == "" or type(data) ~= "string" then
+        return nil
+    end
+    local unesc = unescape(data)
+    local decoded = utils.decode_chain(unesc, 3)
+    for _, rule in pairs(rules or {}) do
+        if rule ~= "" then
+            local m = cache.match_cached(decoded, rule, "isj")
+            if not m then
+                -- 再检查单次解码值（防双重编码时 decoded 过度变形）
+                m = cache.match_cached(unesc, rule, "isj")
+            end
+            if m then
+                return m, rule
+            end
+        end
+    end
+    return nil
+end
+
 function args()
-    local args = ngx.req.get_uri_args()
-    for _, rule in pairs(argsrules or {}) do
-        for key, val in pairs(args) do
-            -- 注意：data 必须在分支外声明，否则 if/else 内的 local 会被丢弃，
-            -- 导致下方匹配逻辑永远拿到 nil（GET 参数检查整体失效）
-            local data
-            if type(val) == 'table' then
-                local t = {}
-                for k, v in pairs(val) do
-                    if v == true then
-                        v = ""
-                    end
-                    table.insert(t, v)
-                end
-                data = table.concat(t, " ")
-            else
-                data = val
+    -- 多取一个用于判断是否超限（超限即拦截，堵住 padding 绕过）
+    local args = ngx.req.get_uri_args(MAX_URI_ARGS + 1)
+    local count = 0
+    for key, val in pairs(args) do
+        count = count + 1
+        if count > MAX_URI_ARGS then
+            log('GET', ngx.var.request_uri, "-", "[ARGS][400] hit=[too many args] count>" .. MAX_URI_ARGS)
+            if should_block("ArgsAction") then
+                return ngx.exit(400)
             end
-            if data and type(data) ~= "boolean" and rule ~= "" then
-                -- 使用解码链防御编码绕过
-                local decoded = utils.decode_chain(unescape(data), 3)
-                local m = cache.match_cached(decoded, rule, "isj")
-                if not m then
-                    -- 再检查原始值
-                    m = cache.match_cached(unescape(data), rule, "isj")
+            return true
+        end
+
+        -- 拼装待检值（table 为多值同名参数）
+        local data
+        if type(val) == 'table' then
+            local t = {}
+            for _, v in pairs(val) do
+                if v == true then
+                    v = ""
                 end
-                if m then
-                    log('GET', ngx.var.request_uri, "-", "[ARGS][403] hit=[" .. string.sub(m[0] or "-", 1, 200) .. "] rule=" .. rule)
-                    if should_block("ArgsAction") then
-                        return say_html()
-                    end
-                    return true
-                end
+                table.insert(t, v)
             end
+            data = table.concat(t, " ")
+        elseif val == true then
+            data = ""
+        else
+            data = val
+        end
+
+        -- 先扫参数值，再扫参数名（防御 ?id[$ne]=1 类 NoSQL 数组参数注入）
+        local m, rule = match_arg_rules(data, argsrules)
+        if not m and type(key) == "string" then
+            m, rule = match_arg_rules(key, argsrules)
+        end
+        if m then
+            log('GET', ngx.var.request_uri, "-", "[ARGS][403] hit=[" .. string.sub(m[0] or "-", 1, 200) .. "] rule=" .. rule)
+            if should_block("ArgsAction") then
+                return say_html()
+            end
+            return true
         end
     end
     return false
@@ -470,6 +502,23 @@ function url()
                 end
             end
         end
+        -- 路径注入检测：规范化路径（已多重解码）再扫一遍 args 注入规则，
+        -- 覆盖 /path/<payload>、%3Cscript%3E、${jndi:} 等编码探针。
+        -- 仅匹配路径部分（不含查询串），正常路由名词不会命中注入语法特征。
+        if norm_uri and norm_uri ~= "" then
+            for _, rule in pairs(argsrules or {}) do
+                if rule ~= "" then
+                    local m = cache.match_cached(norm_uri, rule, "isj")
+                    if m then
+                        log('GET', ngx.var.request_uri, "-", "[URL][403] hit=[" .. string.sub(m[0] or "-", 1, 200) .. "] path-inject rule=" .. rule)
+                        if should_block("URLAction") then
+                            return say_html()
+                        end
+                        return true
+                    end
+                end
+            end
+        end
     end
     return false
 end
@@ -528,9 +577,14 @@ end
 function cookie()
     local ck = ngx.var.http_cookie
     if CookieCheck and ck then
+        -- Cookie 值常做 URL/双重编码，先解码链再匹配，防 %24%7Bjndi 类编码绕过
+        local decoded = utils.decode_chain(unescape(ck), 3)
         for _, rule in pairs(ckrules or {}) do
             if rule ~= "" then
-                local m = cache.match_cached(ck, rule, "isj")
+                local m = cache.match_cached(decoded, rule, "isj")
+                if not m then
+                    m = cache.match_cached(ck, rule, "isj")
+                end
                 if m then
                     log('Cookie', ngx.var.request_uri, "-", "[COOKIE][403] hit=[" .. string.sub(m[0] or "-", 1, 200) .. "] rule=" .. rule)
                     if should_block("CookieAction") then
@@ -734,7 +788,14 @@ function traversal()
     local request_uri = ngx.var.request_uri
     if request_uri ~= nil then
         -- 末尾两组覆盖 ..;/ 混淆（Shiro/Tomcat 经典绕过）：..;、..%3b、%2e%2e;、%2e%2e%3b
-        local m = cache.match_cached(request_uri, [[(\.\./|\.(%2e)|(%2e)\.|%2e%2e|%252e|%%32%65|\%00|(\.\.|%2e%2e|%2e\.|\.%2e)(;|%3b))]], "isj")
+        local m = cache.match_cached(request_uri, [[(\.\./|\.(%2e)|(%2e)\.|%2e%2e|%252e|%32%65|\%00|(\.\.|%2e%2e|%2e\.|\.%2e)(;|%3b))]], "isj")
+        if not m then
+            -- 解码变体：覆盖 ..%2f、..%5c（反斜杠）、双重编码等 WAF 与后端解码差异
+            -- 注意只解码不解析点段（normalize_uri 会把 ../ 消解掉，反而丢失证据）
+            local decoded = utils.decode_chain(request_uri, 3)
+            decoded = string.gsub(decoded, "\\", "/")
+            m = cache.match_cached(decoded, [[\.\./|[%z]]], "isj")
+        end
         if m then
             local hit = string.sub(m[0] or "-", 1, 200)
             log('GET', request_uri, "-", "[TRAVERSAL][400] hit=[" .. hit .. "] path_traversal")
@@ -757,6 +818,25 @@ function headers()
         -- 请求走私：Content-Length 与 Transfer-Encoding 同时出现（RFC 7230 禁止，浏览器/curl 不会发送）
         if headers["content-length"] and headers["transfer-encoding"] then
             log('GET', ngx.var.request_uri, "-", "[HEADER][403] hit=[CL+TE] request_smuggling")
+            if should_block("HeaderAction") then
+                return say_html()
+            end
+            return true
+        end
+        -- 请求走私：重复 Content-Length 头（前后端取不同值导致请求边界混乱）
+        if type(headers["content-length"]) == "table" then
+            log('GET', ngx.var.request_uri, "-", "[HEADER][403] hit=[duplicate-CL] request_smuggling")
+            if should_block("HeaderAction") then
+                return say_html()
+            end
+            return true
+        end
+        -- CVE-2025-24813: Tomcat partial PUT 反序列化 RCE（PUT + Content-Range 组合）
+        -- Tomcat 默认允许 partial PUT，利用链依赖该组合写 session 文件
+        -- 注意：Google Drive 等可续传上传 API 也用 PUT+Content-Range，
+        -- 有此类业务的站点请将 HeaderAction 设为 "log" 或用 whiteurl 放行
+        if headers["content-range"] and ngx.req.get_method() == "PUT" then
+            log('GET', ngx.var.request_uri, "-", "[HEADER][403] hit=[PUT+Content-Range] CVE-2025-24813")
             if should_block("HeaderAction") then
                 return say_html()
             end

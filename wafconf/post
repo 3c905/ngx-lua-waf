@@ -22,10 +22,15 @@
 (?<!\w)updatexml\s*\(
 # 堆叠查询（限定 SQL 对象关键字，避免自然语言分号误伤）
 ;\s*(?:drop\s+table|delete\s+from|insert\s+into|update\s+[^\s]+\s+set|create\s+table|alter\s+table)
+# 经典布尔注入（' or 1=1-- / ' or 'a'='a），限定引号/等值上下文避免自然语言误伤
+'\s*(?:or|and)\s+\S{1,30}\s*=\s*\S{1,30}
+(?<![\w'"])(?:or|and)\s+\d+\s*=\s*\d+
 
 # ========== NoSQL 注入 ==========
 "\$(?:ne|gt|gte|lt|lte|nin|in|exists|or|and|expr|regex|where|geoNear|mapReduce)"
 \[\$where\]
+# PHP 数组式参数注入（user[$ne]=x 绕过认证）
+\[\$(?:ne|gt|gte|lt|lte|nin|in|exists|or|and|expr|regex|where)\]
 
 # ========== 命令注入 ==========
 (?:^|[;|&\n])\s*(?:curl|wget)\s+[^|]+\|\s*(?:bash|sh|cmd|powershell|python|perl|ruby|lua)
@@ -34,6 +39,10 @@
 (?<!\w)(?:eval|exec|system|shell_exec|passthru|proc_open|popen|pcntl_exec)\s*\(
 (?:^|[;|&\n])\s*`[^`]*`
 (?:^|[;|&\n])\s*\$\([^)]+\)
+# 分号/& 拼接信息收集命令（;whoami、&hostname 等；不含 | 避免误杀 Markdown 表格）
+[;&]\s*(?:whoami|uname|hostname|ifconfig|ipconfig|netstat|tasklist)(?:\s|$)
+# 直接读取敏感文件（cat /etc/passwd、type /boot.ini 等）
+(?:^|[\s;|&])(?:cat|type|less|more|head|tail)\s+/(?:etc|proc|sys|root|home|boot)/
 
 # ========== PHP 代码执行 / LFI ==========
 (?<!\w)(?:include|require|require_once|include_once)\s*\(
@@ -41,6 +50,8 @@
 (?<!\w)phpinfo\s*\(
 php://filter
 php://input
+# Windows LFI 目标
+(?:^|[\s/\\])(?:boot\.ini|win\.ini)(?:[/?#.]|$)
 # PHP 危险函数（带上下文）
 (?<!\w)(?:assert|create_function|preg_replace)\s*\(
 \$_(?:GET|POST|REQUEST|COOKIE|FILES|SERVER)\[[^\]]+\]\s*\)\s*;
@@ -59,9 +70,14 @@ php://input
 <\s*(?:svg|math)\s+on\w+
 <\s*iframe\s+[^>]*srcdoc
 (?:^|[^a-z0-9])data:text/html[^;]*;base64,
+# javascript: 伪协议（重定向/链接型 XSS）
+(?:^|[^a-z0-9])javascript\s*:
 
 # ========== JNDI / Log4Shell ==========
 \$\{jndi:(?:ldap[s]?|dns|rmi|iiop|http|https|nis|corba|nds):[^}]*\}
+# Log4Shell 混淆绕过：${${lower:j}ndi:...} 等嵌套占位符
+\$\{[^}\n]{0,120}\$\{
+\$\{(?:lower|upper|base64|main|bundle|log4j):
 
 # ========== Spring4Shell ==========
 class\.module\.classLoader
@@ -78,7 +94,7 @@ spring\.cloud\.function\.definition
 "alg"\s*:\s*"none"
 "jwk"\s*:
 "x5c"\s*:
-"kid"\s*:\s*["']
+# "kid" 字段为正常 JWK/OIDC 交互常见字段（kid 注入由 SQL 注入规则覆盖），已移除
 
 # ========== 反序列化 ==========
 "@type"\s*:\s*"(?:com\.sun|java\.lang\.(?:Runtime|ProcessBuilder)|org\.apache\.(?:commons|ibatis|logging)|org\.springframework|com\.mysql|ch\.qos\.logback)[^"]*"
@@ -88,6 +104,11 @@ AAEAAAD
 
 # ========== SSTI ==========
 (?:\$\{|#\{)[^}]*(?:class|runtime|process|T\s*\(|invoke|exec|getRuntime)[^}]*\}
+# Jinja2/Twig 等 {{ }} 探测（dunder/constructor 访问）
+\{\{[^}]{0,200}(?:__class__|__mro__|__subclasses__|__globals__|__builtins__|constructor|__proto__)[^}]{0,200}\}\}
+
+# ========== 原型污染 ==========
+__proto__\s*[\[":=]
 
 # ========== 文件上传绕过 ==========
 \.(?:php\d?|phtml|phar|jsp|jspx|aspx?|py|sh|pl|rb)\.(?:jpg|jpeg|png|gif|bmp|txt|pdf|doc|zip)
@@ -125,10 +146,11 @@ __import__\s*\(\s*['"]os['"]\s*\)
 
 # Go
 template\.Execute
-html/template
+# html/template 会误杀讨论 Go 模板的正常内容与文档 URL，已移除
 
 # Cloud Native
- eyJhbGciOiJSUzI1NiIsImtpZCI6
+# 原 Kubernetes ServiceAccount Token 特征 " eyJhbGciOiJSUzI1NiIsImtpZCI6" 会命中
+# 所有带 kid 的 RS256 JWT（Auth0/Azure AD/AWS Cognito 等 JSON body 中的 token），已移除。
 # 云元数据响应特征在请求体中多为云平台控制台等正常业务 JSON，已注释
 # "accountId"\s*:\s*"\d{12}"
 # "instance-id"\s*:

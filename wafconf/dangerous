@@ -55,7 +55,8 @@
 ^/_profiler(?:/.*)?$
 
 # AI / Notebook / LLM 平台入口
-^/(gradio|streamlit|jupyter|notebook)(?:/.*)?$
+# notebook 为常见业务名词（笔记类应用路由），已移至 [aggressive]
+^/(gradio|streamlit|jupyter)(?:/.*)?$
 
 # 已知 WebShell / 命令执行文件名（限定脚本扩展名）
 ^/(shell|cmd|webshell|c99|r57|china|fx29|exec|eval)\.(?:php\d?|jsp|asp|aspx|cgi|pl|sh|py)$
@@ -82,7 +83,7 @@
 ^/owa(?:/.*)?$
 ^/pandora_console(?:/.*)?$
 ^/kylin(?:/.*)?$
-^/core/auth/login(?:/.*)?$
+# ^/core/auth/login 为通用业务名词路径，已移至 [aggressive]
 ^/index\.php\?s=/admin/upload
 /admin/upload/
 ^/e/install/
@@ -214,6 +215,8 @@
 
 # 泛微 OA
 ^/weaver/bsh\.servlet\.BshServlet
+# CVE-2026-22679: 泛微 E-cology 10.0 未授权 RCE（debug API，2026-03 起在野利用）
+^/papi/esearch/data/devops/dubboApi/debug/method(?:[/?#]|$)
 
 # UEditor
 ^/ueditor/php/controller\.php
@@ -231,8 +234,7 @@ umeditor\.config\.js$
 
 # Jenkins
 ^/jenkins(?:/.*)?$
-^/script$
-^/scriptText$
+# ^/script$、^/scriptText$ 与开发类站点正常路由冲突，已移至 [aggressive]
 ^/job/.*/build$
 ^/asynchPeople$
 ^/securityRealm/user/admin/search/index
@@ -245,7 +247,7 @@ umeditor\.config\.js$
 ^/confluence(?:/.*)?$
 # ^/wiki(?:/.*)?$ 与站点自带 wiki/文档路由冲突，已移至 [aggressive]
 ^/secure/ViewUserInfo\.(?:jsp|action)$
-^/rest/api/2/user
+# ^/rest/api/2/user 为通用 REST 风格路径，已移至 [aggressive]
 
 # Elasticsearch / Kibana
 ^/(?:_cluster|_nodes|_cat|_aliases|_search|_mapping|_snapshot)(?:/.*)?$
@@ -263,7 +265,7 @@ umeditor\.config\.js$
 
 # Apache Spark
 # ^/jobs(?:/.*)?$ 与招聘/职位页面路由冲突（/jobs 为最常见业务路由之一），已移至 [aggressive]
-^/app/history(?:/.*)?$
+# ^/app/history(?:/.*)?$ 与订单/浏览历史页面路由冲突，已移至 [aggressive]
 
 # Harbor
 ^/api/v2\.0/users$
@@ -325,12 +327,12 @@ bash\.exe
 
 # [java]
 # Java 技术栈敏感端点
-^/druid(?:/.*)?$
+# ^/druid(?:/.*)?$ 与游戏/文学类内容路由冲突（druid 为常见奇幻词汇），已移至 [aggressive]
 ^/h2-console(?:/.*)?$
 ^/jolokia(?:/.*)?$
 ^/sba(?:/.*)?$
 # ^/instances(?:/.*)?$ 与云计算平台实例管理路由冲突，已移至 [aggressive]
-^/monitoring$
+# ^/monitoring$ 与监控页面路由冲突，已移至 [aggressive]
 ^/javamelody(?:/.*)?$
 
 # Java 常见中间件/框架 CVE 路径
@@ -362,10 +364,8 @@ bash\.exe
 # Node.js 常见框架/应用后台
 # Strapi Admin
 # ^/admin(?:/.*)?$ 为通用后台路径，误伤高，已集中移至 [aggressive]
-# Ghost Admin
-^/ghost(?:/.*)?$
-# Node-RED
-^/red(?:/.*)?$
+# Ghost Admin（/ghost 与游戏/影视类内容路由冲突，已移至 [aggressive]）
+# Node-RED（/red 为常见颜色/品牌路由，已移至 [aggressive]）
 # PM2 Web Interface
 ^/pm2(?:/.*)?$
 # Express status-monitor
@@ -378,13 +378,9 @@ bash\.exe
 
 # [php]
 ^/_ignition(?:/.*)?$
-^/telescope(?:/.*)?$
-^/horizon(?:/.*)?$
-^/nova(?:/.*)?$
-^/filament(?:/.*)?$
-^/backpack(?:/.*)?$
-^/laravel-filemanager(?:/.*)?$
-^/filemanager(?:/.*)?$
+# Laravel 工具链（nova/horizon/telescope/backpack/filament 均为常见英文单词，
+# 与内容/电商路由冲突，已移至 [aggressive]）
+# 文件管理器（filemanager 与正常文件管理产品路由冲突，已移至 [aggressive]）
 ^/vendor(?:/.*)?$
 ^/phpunit\.xml(?:\.dist)?$
 ^/\.user\.ini$
@@ -412,8 +408,7 @@ bash\.exe
 ^/wp-content/plugins/(?:wp-file-manager|site-import|gravityforms|revslider|mailpoet|woocommerce)/.*\.(?:php\d?|phtml)$
 
 # Drupal
-^/user/register$
-^/user/password$
+# ^/user/register$、^/user/password$ 为任意站点通用的注册/找回密码路由，已移至 [aggressive]
 ^/admin/config/people/accounts$
 
 # phpMyAdmin / Adminer（core 区已覆盖，此处去重）
@@ -453,7 +448,7 @@ bash\.exe
 # ^/admin(?:/.*)?$ 为通用后台路径，误伤高，已集中移至 [aggressive]
 ^/django-admin(?:/.*)?$
 # Django REST Framework 可浏览 API 登录（信息泄露 + 潜在越权入口）
-^/api-auth(?:/.*)?$
+# ^/api-auth(?:/.*)?$ 与自定义认证 API 路由冲突，已移至 [aggressive]
 
 # Flask Debug Pin bypass / Werkzeug console
 # ^/console$ 与业务控制台路由冲突（各类 admin console），已移至 [aggressive]
@@ -529,8 +524,7 @@ bash\.exe
 ^/rails/info/properties$
 ^/rails/console$
 
-# Sinatra / Puma
-^/sinatra(?:/.*)?$
+# Sinatra / Puma（/sinatra 与人名/内容路由冲突，已移至 [aggressive]）
 
 # Ruby 源码/锁文件
 ^/Gemfile(?:\.lock)?$
@@ -549,8 +543,7 @@ bash\.exe
 ^/#!/pod(?:/.*)?$
 
 # etcd
-^/v2/keys(?:/.*)?$
-^/v3/auth(?:/.*)?$
+# ^/v2/keys(?:/.*)?$ 与 API 密钥管理路由冲突、^/v3/auth(?:/.*)?$ 与认证 API 路由冲突，均已移至 [aggressive]
 
 # Docker Registry
 ^/v2/_catalog$
@@ -643,8 +636,7 @@ bash\.exe
 # ^/browser(?:/.*)?$ 与文件浏览器类业务路由冲突，已移至 [aggressive]
 ^/neo4j(?:/.*)?$
 
-# Cassandra
-^/cassandra(?:/.*)?$
+# Cassandra（/cassandra 与人名路由冲突，已移至 [aggressive]）
 
 # Couchbase
 ^/couchbase(?:/.*)?$
@@ -652,21 +644,19 @@ bash\.exe
 # [middleware]
 # 消息队列 / 注册中心 / 网关 / 代理 / 缓存 管理后台
 
-# Kafka
-^/kafka(?:/.*)?$
+# Kafka（/kafka 与文学类内容路由冲突，已移至 [aggressive]）
 ^/kafka-manager(?:/.*)?$
 ^/kafka-ui(?:/.*)?$
 ^/akhq(?:/.*)?$
 ^/kafdrop(?:/.*)?$
 ^/confluent(?:/.*)?$
-^/c3(?:/.*)?$
+# ^/c3(?:/.*)?$ 与车型/短路径路由冲突，已移至 [aggressive]
 
 # RocketMQ
 ^/rocketmq(?:/.*)?$
 ^/rocketmq-console(?:/.*)?$
 
-# Pulsar
-^/pulsar(?:/.*)?$
+# Pulsar（/pulsar 与天文/品牌内容路由冲突，已移至 [aggressive]）
 ^/pulsar-manager(?:/.*)?$
 
 # Nacos
@@ -675,9 +665,8 @@ bash\.exe
 # Apollo
 # ^/apollo(?:/.*)?$、^/config(?:/.*)?$、^/portal(?:/.*)?$ 均为通用业务名词（门户/配置页/品牌页），已移至 [aggressive]
 
-# ZooKeeper
-^/zookeeper(?:/.*)?$
-^/exhibitor(?:/.*)?$
+# ZooKeeper（/zookeeper 与动物园/内容路由冲突，已移至 [aggressive]）
+# Exhibitor（/exhibitor 与展会类业务路由冲突，已移至 [aggressive]）
 
 # ActiveMQ
 ^/activemq(?:/.*)?$
@@ -687,15 +676,13 @@ bash\.exe
 ^/emqx(?:/.*)?$
 ^/mqtt(?:/.*)?$
 
-# NATS
-^/nats(?:/.*)?$
+# NATS（/nats 与体育/昵称类路由冲突，已移至 [aggressive]）
 
 # Traefik
 ^/traefik(?:/.*)?$
 ^/api/providers(?:/.*)?$
 
-# Envoy
-^/envoy(?:/.*)?$
+# Envoy（/envoy 与车型/酒店品牌路由冲突，已移至 [aggressive]）
 
 # Nginx 管理 UI
 ^/nginx-ui(?:/.*)?$
@@ -885,3 +872,65 @@ bash\.exe
 
 # AI / LLM OpenAI 兼容接口探测（合并原 core 与 [ai] 规则；LLM 网关站点勿开启 aggressive）
 ^/v1/(?:models|embeddings|chat/completions|completions|images|audio|files|fine-tunes|batches|assistants|threads|vector_stores|moderations|realtime)$
+
+# ========== 通用英文名词 / 常见业务路由冲突路径（2026-07-26 从 core 移入）==========
+# 以下规则指向的产品/平台名同时是常见英文单词或通用业务路由，
+# 在 core 中会误杀正常内容页与业务接口（如天文站 /telescope、车展 /envoy、
+# 笔记应用 /notebook、注册页 /user/register）。确认站点无对应业务后，
+# 开启 BlockAggressive 即可恢复拦截。
+
+# 笔记/内容类
+^/notebook(?:/.*)?$
+^/ghost(?:/.*)?$
+
+# Laravel 工具链（均为常见英文单词）
+^/nova(?:/.*)?$
+^/horizon(?:/.*)?$
+^/telescope(?:/.*)?$
+^/backpack(?:/.*)?$
+^/filament(?:/.*)?$
+^/laravel-filemanager(?:/.*)?$
+^/filemanager(?:/.*)?$
+
+# 游戏/文学/人名/品牌类
+^/druid(?:/.*)?$
+^/kafka(?:/.*)?$
+^/sinatra(?:/.*)?$
+^/cassandra(?:/.*)?$
+^/pulsar(?:/.*)?$
+^/nats(?:/.*)?$
+^/envoy(?:/.*)?$
+^/exhibitor(?:/.*)?$
+^/zookeeper(?:/.*)?$
+^/c3(?:/.*)?$
+^/red(?:/.*)?$
+
+# 通用业务路由
+^/monitoring$
+^/script$
+^/scriptText$
+^/app/history(?:/.*)?$
+^/core/auth/login(?:/.*)?$
+^/rest/api/2/user
+^/api-auth(?:/.*)?$
+^/v2/keys(?:/.*)?$
+^/v3/auth(?:/.*)?$
+
+# 任意站点通用的注册/找回密码路由（原 Drupal 规则）
+^/user/register$
+^/user/password$
+
+# ========== 2026-07 在野利用 CVE（有正常功能冲突，按需开启）==========
+
+# CVE-2026-1731: BeyondTrust RS/PRA pre-auth RCE 侦察链
+# 攻击者先调 get_portal_info 提取 x-ns-company 再建立 WebSocket /nw 通道；
+# WAF 无法检查 WebSocket 帧，只能断 HTTP 侦察环节。
+# 注意：BeyondTrust 正常客户端也调用此接口，WAF 前置 BeyondTrust 时勿开 aggressive
+(?:^|/)get_portal_info(?:[/?#]|$)
+
+# SharePoint 反序列化 RCE 链（CVE-2025-53770 ToolShell 及 CVE-2026-58644/50522/45659 变种）
+# 注意：ToolPane.aspx?DisplayMode=Edit 是 SharePoint 管理员编辑 WebPart 的正常入口，
+# WAF 前置 SharePoint 时勿开 aggressive（或先用 whiteurl 放行管理路径）
+/_layouts/15/ToolPane\.aspx\?[^ ]*DisplayMode=Edit
+(?:^|/)_vti_bin/webpartpages\.asmx
+(?:^|/)_layouts/15/spinstall\.aspx
